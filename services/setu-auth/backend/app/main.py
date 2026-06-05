@@ -12,6 +12,9 @@ app = FastAPI(title="Shetu Auth Backend", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins_list,
+    # Accept localhost / 127.0.0.1 on any port for local development so the
+    # frontend works regardless of which host alias the browser uses.
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
