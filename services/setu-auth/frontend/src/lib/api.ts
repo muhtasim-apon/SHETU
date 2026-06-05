@@ -1,6 +1,7 @@
 /** Typed fetch wrapper around the FastAPI backend. */
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+// Strip any trailing slash so paths like `/api/...` don't produce `//api/...`.
+const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/+$/, "");
 
 export type Role = "admin" | "mother" | "patient";
 
