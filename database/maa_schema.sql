@@ -188,6 +188,7 @@ CREATE INDEX IF NOT EXISTS idx_symptoms_is_red_flag  ON symptoms(is_red_flag);
 -- ---------------------------------------------------------------------------
 -- TABLE: anc_checkups
 -- ANC (Antenatal Care) visit tracker. WHO recommends ≥ 8 contacts.
+-- Includes: fetus monitoring + medication & exercise tracking
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS anc_checkups (
   id                    UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -196,6 +197,8 @@ CREATE TABLE IF NOT EXISTS anc_checkups (
   scheduled_date        DATE,
   completed_date        DATE,
   anc_number            INT,        -- 1, 2, 3 … WHO 2016: 8 contacts recommended
+
+  -- ── Standard ANC checks ──────────────────────────────────────────────────
   bp_checked            BOOLEAN     NOT NULL DEFAULT FALSE,
   weight_checked        BOOLEAN     NOT NULL DEFAULT FALSE,
   urine_tested          BOOLEAN     NOT NULL DEFAULT FALSE,
@@ -203,14 +206,41 @@ CREATE TABLE IF NOT EXISTS anc_checkups (
   tetanus_given         BOOLEAN     NOT NULL DEFAULT FALSE,
   iron_folic_given      BOOLEAN     NOT NULL DEFAULT FALSE,
   counseling_done       BOOLEAN     NOT NULL DEFAULT FALSE,
+
+  -- ── Fetus monitoring ─────────────────────────────────────────────────────
+  ultrasound_done       BOOLEAN     NOT NULL DEFAULT FALSE,
+  fetal_movement_felt   BOOLEAN     NOT NULL DEFAULT FALSE, -- mother felt kicks/movement?
+  fetal_kick_count      INT,                                -- kicks per 2 hours
+  fetal_heart_rate      INT,                                -- FHR bpm (normal 120–160)
+  fetal_weight_grams    INT,                                -- estimated weight from scan
+  fetal_position        TEXT,                               -- 'cephalic' | 'breech' | 'transverse'
+  fetal_condition_notes TEXT,                               -- observations / concerns
+
+  -- ── Medication tracking ───────────────────────────────────────────────────
+  medications_prescribed JSONB,     -- [{name, dosage, frequency, duration}]
+
+  -- ── Exercise for mother ───────────────────────────────────────────────────
+  exercise_recommended   BOOLEAN    NOT NULL DEFAULT FALSE,
+  breathing_exercise_done BOOLEAN   NOT NULL DEFAULT FALSE, -- pranayama / deep breathing
+  light_stretching_done  BOOLEAN    NOT NULL DEFAULT FALSE, -- gentle prenatal stretches
+  walking_done           BOOLEAN    NOT NULL DEFAULT FALSE,
+  walking_minutes        INT,                               -- minutes walked
+  exercise_notes         TEXT,                              -- additional guidance given
+
+  -- ── Meta ─────────────────────────────────────────────────────────────────
   next_appointment_date DATE,
   notes                 TEXT,
-  created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE OR REPLACE TRIGGER set_anc_checkups_updated_at
+  BEFORE UPDATE ON anc_checkups
+  FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at();
 
 CREATE INDEX IF NOT EXISTS idx_anc_checkups_pregnancy_id ON anc_checkups(pregnancy_id);
 CREATE INDEX IF NOT EXISTS idx_anc_checkups_patient_id   ON anc_checkups(patient_id);
-
+CREATE INDEX IF NOT EXISTS idx_anc_checkups_completed    ON anc_checkups(completed_date);
 -- ---------------------------------------------------------------------------
 -- TABLE: maa_conversations
 -- One session = one chat with Maa AI. escalated_to_sos = TRUE if red flag fired.
