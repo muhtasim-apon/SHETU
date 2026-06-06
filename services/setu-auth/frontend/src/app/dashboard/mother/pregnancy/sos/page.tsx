@@ -99,14 +99,32 @@ export default function SOSPage() {
     window.location.href = 'tel:999'
   }
 
-  function startVoiceListening() {
+  async function startVoiceListening() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SpeechRecognition) {
       setToast('Voice SOS not supported on this browser. Use the Call button above.')
-      setTimeout(() => setToast(''), 4000)
+      setTimeout(() => setToast(''), 5000)
       return
     }
+
+    // Explicitly ask for microphone permission first so the browser shows the
+    // allow/block prompt. If the user previously blocked it, this rejects and
+    // we guide them to re-enable it (the lock/🔒 icon in the address bar).
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      // We only needed the permission grant; release the mic for the
+      // SpeechRecognition engine to use it.
+      stream.getTracks().forEach(t => t.stop())
+    } catch {
+      setToast(
+        'Microphone is blocked. Tap the 🔒 / camera icon in your browser address bar, ' +
+        'set Microphone to "Allow", then try again.'
+      )
+      setTimeout(() => setToast(''), 8000)
+      return
+    }
+
     const recognition = new SpeechRecognition()
     recognition.continuous = true
     recognition.lang = 'bn-BD'
@@ -139,7 +157,18 @@ export default function SOSPage() {
       }
     }
 
-    recognition.onerror = () => { setListening(false) }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    recognition.onerror = (event: any) => {
+      setListening(false)
+      if (event?.error === 'not-allowed' || event?.error === 'service-not-allowed') {
+        setToast(
+          'Microphone is blocked. Tap the 🔒 / camera icon in your browser address bar, ' +
+          'set Microphone to "Allow", then try again.'
+        )
+        setTimeout(() => setToast(''), 8000)
+      }
+    }
+    recognition.onend = () => setListening(false)
     recognition.start()
     recognitionRef.current = recognition
     setListening(true)

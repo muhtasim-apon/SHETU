@@ -1,7 +1,7 @@
 """Authentication routes: signup, signin, and current-user lookup."""
 from fastapi import APIRouter, Header, HTTPException, status
 
-from app.core.supabase import create_anon_client, supabase_admin
+from app.core.supabase import create_anon_client, get_admin, retry_network
 from app.models.user import (
     AuthResponse,
     MessageResponse,
@@ -19,8 +19,9 @@ def _fetch_profile(user_id: str, email: str | None = None) -> UserProfile:
     The profiles table stores email, so prefer that; fall back to the
     caller-supplied email (e.g. the value from the auth token) if absent.
     """
-    result = (
-        supabase_admin.table("profiles")
+    result = retry_network(
+        lambda: get_admin()
+        .table("profiles")
         .select("*")
         .eq("id", user_id)
         .single()
@@ -57,18 +58,20 @@ def signup(body: SignUpRequest) -> MessageResponse:
     """
     anon = create_anon_client()
     try:
-        result = anon.auth.sign_up(
-            {
-                "email": body.email,
-                "password": body.password,
-                "options": {
-                    "data": {
-                        "role": body.role,
-                        "full_name": body.full_name,
-                        "phone": body.phone,
-                    }
-                },
-            }
+        result = retry_network(
+            lambda: anon.auth.sign_up(
+                {
+                    "email": body.email,
+                    "password": body.password,
+                    "options": {
+                        "data": {
+                            "role": body.role,
+                            "full_name": body.full_name,
+                            "phone": body.phone,
+                        }
+                    },
+                }
+            )
         )
     except Exception as exc:  # noqa: BLE001 — surface a clean 400 to the client
         raise HTTPException(
@@ -90,8 +93,10 @@ def signin(body: SignInRequest) -> AuthResponse:
     """Sign in with email + password and return a token plus profile."""
     anon = create_anon_client()
     try:
-        result = anon.auth.sign_in_with_password(
-            {"email": body.email, "password": body.password}
+        result = retry_network(
+            lambda: anon.auth.sign_in_with_password(
+                {"email": body.email, "password": body.password}
+            )
         )
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(
@@ -125,7 +130,7 @@ def me(authorization: str | None = Header(default=None)) -> UserProfile:
     token = authorization.split(" ", 1)[1].strip()
     anon = create_anon_client()
     try:
-        user_response = anon.auth.get_user(token)
+        user_response = retry_network(lambda: anon.auth.get_user(token))
     except Exception:  # noqa: BLE001
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

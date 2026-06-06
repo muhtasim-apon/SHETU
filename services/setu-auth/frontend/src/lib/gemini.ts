@@ -1,48 +1,63 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
-const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY!)
+const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY
 
-export const MATERNAL_SYSTEM_PROMPT = `You are Shetu Maa, a warm and trusted maternal health companion for pregnant women in Bangladesh. You are like a caring relative who also has deep knowledge of maternal health, the WHO antenatal care guidelines, and Bangladesh DGHS protocols.
+if (!API_KEY) {
+  console.error('[Shetu] NEXT_PUBLIC_GEMINI_API_KEY is missing from .env.local')
+}
+
+const genAI = new GoogleGenerativeAI(API_KEY ?? '')
+
+export const MATERNAL_SYSTEM_PROMPT = `You are Shetu Maa, a warm and trusted maternal health companion for pregnant women in Bangladesh. You speak like a caring relative who also knows maternal health deeply.
 
 Guidelines:
-- Respond warmly in the same language the user writes in (Bangla or English)
-- For Bangla input, respond in Bangla; for English input, respond in English
-- Always be supportive, calm, and non-alarmist
-- For ANY of these danger signs, immediately tell the user to call 999 and use the SOS button: severe headache, blurred vision, heavy bleeding, severe abdominal pain, no fetal movement for 12+ hours, high fever, swollen face/hands/feet with headache, difficulty breathing
-- Never diagnose. Always say "consult your doctor" for medical questions
-- Keep responses concise (under 150 words) for easy reading on mobile
-- Reference weeks/trimester when relevant
-- Remind about ANC visits, iron supplements, nutrition when appropriate`
+- Respond in the same language the user writes in (Bangla or English)
+- Be supportive, calm, never alarming
+- For danger signs (severe headache, blurred vision, heavy bleeding, severe abdominal pain, no fetal movement 12+ hours, high fever) tell the user to call 999 and use SOS immediately
+- Never diagnose. Always say "consult your doctor"
+- Keep responses under 150 words for mobile readability
+- Reference pregnancy week and trimester when helpful
+- Remind about ANC visits, iron supplements, nutrition`
 
 const RED_FLAGS = [
   '999', 'emergency', 'immediately', 'call doctor now',
   'heavy bleeding', 'severe headache', 'no movement',
+  'hospital now', 'danger sign',
 ]
 
 export async function sendMessageToMaa(
-  messages: Array<{ role: 'user' | 'model'; parts: [{ text: string }] }>,
+  history: Array<{ role: 'user' | 'model'; parts: [{ text: string }] }>,
   userMessage: string,
-  pregnancyContext: { weeks: number; trimester: string; edd: string }
+  context: { weeks: number; trimester: string; edd: string }
 ): Promise<{ response: string; redFlagDetected: boolean; redFlagType?: string }> {
-  const contextualPrompt = `${MATERNAL_SYSTEM_PROMPT}
-- You know the user's pregnancy week: ${pregnancyContext.weeks} weeks, trimester: ${pregnancyContext.trimester}, due date: ${pregnancyContext.edd}`
 
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-1.5-flash',
-    systemInstruction: contextualPrompt,
-  })
+  if (!API_KEY) {
+    throw new Error('Gemini API key not configured. Add NEXT_PUBLIC_GEMINI_API_KEY to .env.local')
+  }
 
-  const chat = model.startChat({ history: messages })
-  const result = await chat.sendMessage(userMessage)
-  const responseText = result.response.text()
+  const systemPrompt = `${MATERNAL_SYSTEM_PROMPT}
+- Patient is ${context.weeks} weeks pregnant (trimester ${context.trimester}), due: ${context.edd}`
 
-  const lower = responseText.toLowerCase()
-  const matchedFlag = RED_FLAGS.find(flag => lower.includes(flag))
-  const redFlagDetected = !!matchedFlag
+  try {
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.5-flash',
+      systemInstruction: systemPrompt,
+    })
 
-  return {
-    response: responseText,
-    redFlagDetected,
-    redFlagType: matchedFlag,
+    const chat = model.startChat({ history })
+    const result = await chat.sendMessage(userMessage)
+    const responseText = result.response.text()
+
+    const lower = responseText.toLowerCase()
+    const matchedFlag = RED_FLAGS.find(flag => lower.includes(flag))
+
+    return {
+      response: responseText,
+      redFlagDetected: !!matchedFlag,
+      redFlagType: matchedFlag,
+    }
+  } catch (err) {
+    console.error('[Shetu Gemini] API call failed:', err)
+    throw err
   }
 }
