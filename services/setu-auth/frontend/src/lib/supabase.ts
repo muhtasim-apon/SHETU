@@ -4,9 +4,30 @@ import type { CookieOptions } from "@supabase/ssr";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-/** Browser-side Supabase client for use in client components. */
+/**
+ * Browser-side Supabase client for use in client components.
+ *
+ * Auth in this app is handled by the FastAPI backend, which returns a real
+ * Supabase Auth `access_token` (stored as `shetu_token`). We forward that token
+ * on every request so PostgREST runs the query as the `authenticated` role with
+ * the correct `auth.uid()` — otherwise RLS policies like
+ * `profile_id = auth.uid()` reject every read/write and the data never loads.
+ */
 export function createClient() {
-  return createBrowserClient(supabaseUrl, supabaseAnonKey);
+  const token =
+    typeof window !== "undefined"
+      ? window.localStorage.getItem("shetu_token")
+      : null;
+
+  return createBrowserClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    },
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
 }
 
 /**
