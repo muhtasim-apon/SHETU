@@ -128,32 +128,39 @@ export default function SOSPage() {
     const recognition = new SpeechRecognition()
     recognition.continuous = true
     recognition.lang = 'bn-BD'
-    recognition.interimResults = false
+    // interimResults = true so we react to partial speech instantly instead of
+    // waiting for the speaker to pause — critical in an emergency.
+    recognition.interimResults = true
+
+    let fired = false
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recognition.onresult = async (event: any) => {
+      if (fired) return
       const transcript = Array.from(event.results as unknown[])
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .map((r: any) => r[0].transcript.toLowerCase())
         .join(' ')
 
       if (SOS_KEYWORDS.some(kw => transcript.includes(kw))) {
+        fired = true
         recognition.stop()
         setListening(false)
-        const eventId = await triggerSOS('wake_word')
-        setOverlayEventId(eventId)
-        setCountdown(5)
-        setOverlay(true)
 
-        // Generate beep
+        // Short beep for feedback (best-effort, never blocks the call).
         try {
           const ctx = new AudioContext()
           const osc = ctx.createOscillator()
           osc.connect(ctx.destination)
           osc.frequency.value = 880
           osc.start()
-          setTimeout(() => osc.stop(), 500)
+          setTimeout(() => osc.stop(), 400)
         } catch { /* ignore */ }
+
+        // Log the event in the background — do NOT await it, the call must be
+        // immediate. Then dial 999 right away (no countdown).
+        triggerSOS('wake_word').catch(() => {})
+        window.location.href = 'tel:999'
       }
     }
 
@@ -282,7 +289,7 @@ export default function SOSPage() {
       <div className="bg-white rounded-2xl mx-4 mt-5 p-5 shadow-sm">
         <p className="font-semibold text-[15px] text-gray-800">🎙️ Voice SOS</p>
         <p className="text-xs text-gray-500 mt-1">
-          Say &apos;Help&apos; or &apos;Emergency&apos; to activate SOS automatically
+          Say &apos;Help&apos;, &apos;Emergency&apos; or &apos;সাহায্য&apos; — it dials 999 instantly
         </p>
         <div className="flex items-center gap-2 mt-3">
           {listening ? (

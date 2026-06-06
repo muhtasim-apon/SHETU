@@ -142,8 +142,10 @@ export default function ChatPage() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recognition.onresult = (event: any) => {
       const transcript: string = event.results[0][0].transcript
-      setInput(prev => prev ? prev + ' ' + transcript : transcript)
       setVoiceListening(false)
+      // Instant handling: send the spoken message immediately instead of just
+      // dropping it in the input box.
+      if (transcript.trim()) handleSend(transcript.trim())
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -162,10 +164,10 @@ export default function ChatPage() {
     recognitionRef.current = recognition
   }
 
-  async function handleSend() {
-    if (!input.trim() || sending || !patient || !pregnancy) return
+  async function handleSend(overrideText?: string) {
+    const userText = (overrideText ?? input).trim()
+    if (!userText || sending || !patient || !pregnancy) return
 
-    const userText = input.trim()
     setInput('')
     setError('')
 
@@ -190,7 +192,7 @@ export default function ChatPage() {
           parts: [{ text: m.content }] as [{ text: string }],
         }))
 
-      const { response, redFlagDetected, redFlagType } = await sendMessageToMaa(
+      const { response, redFlagDetected, redFlagType, modelUsed } = await sendMessageToMaa(
         history,
         userText,
         {
@@ -223,7 +225,7 @@ export default function ChatPage() {
           { conversation_id: convId, role: 'user', content: userText,
             safety_gate_passed: true, red_flag_detected: false },
           { conversation_id: convId, role: 'assistant', content: response,
-            model_used: 'gemini-2.5-flash', safety_gate_passed: true,
+            model_used: modelUsed, safety_gate_passed: true,
             red_flag_detected: redFlagDetected, red_flag_type: redFlagType ?? null },
         ])
         if (msgErr) console.error('[Chat] Message save error:', msgErr)
@@ -383,7 +385,7 @@ export default function ChatPage() {
           />
 
           <button
-            onClick={handleSend}
+            onClick={() => handleSend()}
             disabled={sending || !input.trim() || voiceListening}
             className="w-10 h-10 rounded-full bg-[#0E7C66] flex items-center justify-center shrink-0 disabled:opacity-40"
           >
