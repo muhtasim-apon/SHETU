@@ -49,6 +49,17 @@ async def get_patient(current_user: dict = Depends(get_current_user)) -> dict:
     return patient
 
 
+async def get_active_pregnancy(patient: dict = Depends(get_patient)) -> Optional[dict]:
+    """Load the active pregnancy row for the patient (may be None)."""
+    result = retry_network(
+        lambda: get_admin_client().table("pregnancies")
+        .select("*").eq("patient_id", patient["id"]).eq("status", "active")
+        .order("created_at", desc=True).limit(1).execute()
+    )
+    rows = result.data or []
+    return rows[0] if rows else None
+
+
 async def get_health_profile(patient: dict = Depends(get_patient)) -> Optional[dict]:
     """Load the patient_health_profiles row (may be None if not created yet)."""
     result = retry_network(

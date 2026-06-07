@@ -74,11 +74,14 @@ def _clean_summary(raw: str) -> str:
 
 async def fetch_and_cache_articles():
     """Fetch all RSS feeds, filter by keywords, populate the in-memory cache."""
+    import asyncio
     global _article_cache, _cache_updated_at
     all_articles = []
+    loop = asyncio.get_event_loop()
     for source_name, cfg in SOURCES.items():
         try:
-            feed = feedparser.parse(cfg["url"])
+            # Run blocking feedparser.parse in a thread so the event loop stays free
+            feed = await loop.run_in_executor(None, feedparser.parse, cfg["url"])
             for entry in feed.entries:
                 title = entry.get("title", "")
                 summary = _clean_summary(entry.get("summary", ""))

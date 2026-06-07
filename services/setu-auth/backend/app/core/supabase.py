@@ -59,7 +59,7 @@ def _retry(fn: Callable[[], T], attempts: int = 3, delay: float = 3.0) -> T:
 # On slow/restricted networks the first TLS handshake to Supabase can time out
 # ("_ssl.c:983: The handshake operation timed out"); retrying recovers it.
 def retry_network(fn: Callable[[], T]) -> T:
-    return _retry(fn, attempts=3, delay=2.0)
+    return _retry(fn, attempts=2, delay=2.0)
 
 
 def _client_options() -> ClientOptions:
@@ -72,7 +72,9 @@ def _client_options() -> ClientOptions:
 
 
 def _make_client(url: str, key: str) -> Client:
-    return _retry(lambda: create_client(url, key, options=_client_options()))
+    # Only 1 attempt for client creation — network won't recover mid-request.
+    # Use retry_network() for actual queries where transient errors matter.
+    return _retry(lambda: create_client(url, key, options=_client_options()), attempts=1)
 
 
 # ── Admin client (service_role) — lazy so startup never hard-crashes ─────────

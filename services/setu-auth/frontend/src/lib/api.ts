@@ -1,7 +1,24 @@
-/** Typed fetch wrapper around the FastAPI backend. */
+/**
+ * Auth API — runs directly against Supabase from the browser.
+ *
+ * Auth used to proxy through the FastAPI backend, but Python's httpx hits SSL
+ * handshake timeouts to Supabase under WSL2. The browser uses native OS
+ * networking, so calling Supabase Auth directly is both reliable and the
+ * standard Supabase pattern. The data-API routes (vitals, reports, …) still go
+ * through the FastAPI backend with the returned access_token.
+ */
+import { createClient as createSupabaseJs } from "@supabase/supabase-js";
 
-// Strip any trailing slash so paths like `/api/...` don't produce `//api/...`.
-const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/+$/, "");
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+// Fresh client with NO persisted session — we manage the token in localStorage
+// ourselves (stored as `shetu_token`) to stay compatible with the rest of the app.
+function authClient() {
+  return createSupabaseJs(supabaseUrl, supabaseAnonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
 
 export type Role = "admin" | "mother" | "patient";
 
@@ -37,47 +54,108 @@ export interface MessageResponse {
   message: string;
 }
 
-/** Throws an Error carrying the backend `detail` message on non-2xx. */
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
-    ...init,
+/** Map raw Supabase auth errors to short, user-safe messages. */
+function cleanError(message: string): string {
+  const lowered = message.toLowerCase();
+  if (lowered.includes("already") && lowered.includes("registered"))
+    return "An account with this email already exists.";
+  if (lowered.includes("password") && (lowered.includes("weak") || lowered.includes("least")))
+    return "Password is too weak. Use at least 8 characters.";
+  if (lowered.includes("email not confirmed"))
+    return "Email not confirmed. Please verify your email first.";
+  if (lowered.includes("invalid login credentials"))
+    return "Invalid email or password.";
+  return message || "Something went wrong. Please try again.";
+}
+
+/** Load the profile row (created by the DB trigger) using an authed client. */
+async function fetchProfile(
+  userId: string,
+  accessToken: string,
+  fallbackEmail?: string,
+): Promise<UserProfile> {
+  const client = createSupabaseJs(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: `Bearer ${accessToken}` } },
+    auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  let body: unknown = null;
+  const { data, error } = await client
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .single();
+
+  if (error || !data) {
+    throw new Error("Profile not found. Please contact support.");
+  }
+
+  return {
+    id: data.id,
+    email: data.email ?? fallbackEmail ?? "",
+    role: data.role,
+    full_name: data.full_name,
+    phone: data.phone ?? null,
+    created_at: data.created_at ?? null,
+  };
+}
+
+export async function signUp(data: SignUpData): Promise<MessageResponse> {
+  const { data: result, error } = await authClient().auth.signUp({
+    email: data.email,
+    password: data.password,
+    options: {
+      data: {
+        role: data.role,
+        full_name: data.full_name,
+        phone: data.phone ?? null,
+      },
+    },
+  });
+
+  if (error) throw new Error(cleanError(error.message));
+  if (!result.user) throw new Error("Sign up failed. Please try again.");
+
+  return { message: "Verification email sent. Please check inbox." };
+}
+
+export async function signIn(data: SignInData): Promise<AuthResponse> {
+  const { data: result, error } = await authClient().auth.signInWithPassword({
+    email: data.email,
+    password: data.password,
+  });
+
+  if (error) throw new Error(cleanError(error.message));
+  if (!result.session || !result.user) throw new Error("Invalid email or password.");
+
+  const accessToken = result.session.access_token;
+  const u = result.user;
+
+  let profile: UserProfile;
   try {
-    body = await res.json();
+    profile = await fetchProfile(u.id, accessToken, data.email);
   } catch {
-    body = null;
+    // RLS blocked the profiles read or the row is missing — fall back to the
+    // user_metadata captured at signup so login still succeeds.
+    const meta = (u.user_metadata ?? {}) as Record<string, unknown>;
+    profile = {
+      id: u.id,
+      email: u.email ?? data.email,
+      role: (meta.role as Role) ?? "patient",
+      full_name: (meta.full_name as string) ?? (u.email ?? "User"),
+      phone: (meta.phone as string) ?? null,
+      created_at: u.created_at ?? null,
+    };
   }
 
-  if (!res.ok) {
-    const detail =
-      (body as { detail?: string } | null)?.detail ??
-      "Something went wrong. Please try again.";
-    throw new Error(detail);
-  }
-
-  return body as T;
+  return {
+    access_token: accessToken,
+    token_type: "bearer",
+    user: profile,
+  };
 }
 
-export function signUp(data: SignUpData): Promise<MessageResponse> {
-  return request<MessageResponse>("/api/v1/auth/signup", {
-    method: "POST",
-    body: JSON.stringify(data),
-  });
-}
-
-export function signIn(data: SignInData): Promise<AuthResponse> {
-  return request<AuthResponse>("/api/v1/auth/signin", {
-    method: "POST",
-    body: JSON.stringify(data),
-  });
-}
-
-export function getMe(token: string): Promise<UserProfile> {
-  return request<UserProfile>("/api/v1/auth/me", {
-    method: "GET",
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export async function getMe(token: string): Promise<UserProfile> {
+  const { data, error } = await authClient().auth.getUser(token);
+  if (error || !data.user) throw new Error("Invalid or expired token.");
+  return fetchProfile(data.user.id, token, data.user.email ?? undefined);
 }
