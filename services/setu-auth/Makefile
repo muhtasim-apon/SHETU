@@ -38,7 +38,7 @@ dev:
 	@$(MAKE) -j2 backend frontend
 
 backend:
-	@echo "→ Starting FastAPI on http://localhost:8000 ..."
+	@echo "→ Starting FastAPI (auth + Saathi patient API) on http://localhost:8000 ..."
 	@cd backend && .venv/bin/uvicorn app.main:app --reload --port 8000 --host 0.0.0.0
 
 frontend:
@@ -66,9 +66,8 @@ clean-frontend:
 lint: lint-backend lint-frontend
 
 lint-backend:
-	@cd backend && .venv/bin/python -m py_compile app/main.py app/core/config.py \
-	  app/core/supabase.py app/models/user.py app/routes/auth.py && \
-	  echo "✓ Backend syntax OK"
+	@cd backend && find app -name "*.py" -print0 | xargs -0 .venv/bin/python -m py_compile && \
+	  echo "✓ Backend syntax OK (auth + saathi)"
 
 lint-frontend:
 	@cd frontend && npm run lint --silent && echo "✓ Frontend lint OK"

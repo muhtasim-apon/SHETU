@@ -5,3 +5,15 @@ pydantic-settings==2.7.1
 email-validator==2.2.0
 supabase==2.11.0
 python-dotenv==1.0.1
+
+# ── Shetu Saathi (patient module) ──
+httpx
+google-generativeai
+reportlab
+python-jose[cryptography]
+feedparser
+beautifulsoup4
+requests
+apscheduler
+python-multipart
+Pillow

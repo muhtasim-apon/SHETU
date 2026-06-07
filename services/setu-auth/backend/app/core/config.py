@@ -13,6 +13,15 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: str = "http://localhost:3000"
     PORT: int = 8000
 
+    # ── Shetu Saathi (patient module) settings ──────────────────────────────
+    GEMINI_API_KEY: str = ""
+    OPENROUTER_API_KEY: str = ""
+    BMDC_API_BASE: str = "https://www.bmdc.org.bd"
+    WHO_RSS_URL: str = "https://www.who.int/feeds/entity/mediacentre/news/en/rss.xml"
+    CDC_RSS_URL: str = "https://tools.cdc.gov/podcasts/feed.asp?feedid=183"
+    NHS_RSS_URL: str = "https://www.nhs.uk/conditions/rss.xml"
+    REPORT_STORAGE_PATH: str = "./generated_reports"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

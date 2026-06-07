@@ -98,3 +98,16 @@ supabase_admin: Client = None  # type: ignore  (populated on first request)
 def create_anon_client() -> Client:
     """Fresh anon-key client for each user-scoped request."""
     return _make_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
+
+
+# ── Shetu Saathi (patient module) aliases ────────────────────────────────────
+def get_admin_client() -> Client:
+    """Alias for get_admin() used by the patient (Saathi) modules."""
+    return get_admin()
+
+
+def get_user_client(jwt: str) -> Client:
+    """User-scoped Supabase client (anon key + user JWT)."""
+    client = _make_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
+    client.postgrest.auth(jwt)
+    return client
