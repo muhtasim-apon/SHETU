@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Activity, Baby, ChevronRight, Leaf, LogOut, MessageSquare, User, Zap } from "lucide-react";
+import { Activity, Baby, ChevronRight, Leaf, LogOut, MessageSquare, User } from "lucide-react";
 
 import type { UserProfile } from "@/lib/api";
 
@@ -34,13 +34,6 @@ const MODULES = [
     description: "Personalised nutrition plans for you and your baby.",
     icon: Leaf,
     href: "/dashboard/mother/nutrition",
-  },
-  {
-    id: "shetu-lite",
-    name: "Shetu Lite",
-    description: "Quick access to essential care features on the go.",
-    icon: Zap,
-    href: "/dashboard/mother/shetu-lite",
   },
 ] as const;
 
