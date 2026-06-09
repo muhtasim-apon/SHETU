@@ -86,8 +86,16 @@ export default function VitalsPage() {
     }
   }
 
-  const hasSevere = result?.flags.some((f) => f.severity === "severe");
+  // Only show SOS if the actual entered values are truly critical — never for normal readings
   const spo2n = spo2 ? +spo2 : null;
+  const hasSevere =
+    result?.flags.some((f) => f.severity === "severe") &&
+    (
+      (sys && +sys >= 180) ||
+      (dia && +dia >= 110) ||
+      (spo2n !== null && spo2n < 88) ||
+      (temp && +temp >= 40.5)
+    );
 
   return (
     <div className="min-h-screen bg-[#F4FAF8] pb-12">

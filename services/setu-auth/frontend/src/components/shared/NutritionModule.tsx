@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, CheckCircle, AlertCircle, Leaf, Star, Trophy, X, Flame, Droplets, Pill } from 'lucide-react'
+import { ArrowLeft, CheckCircle, AlertCircle, Leaf, Star, Trophy, X, Flame, Droplets, Pill, Save } from 'lucide-react'
 import type { NutritionProfile, NutritionPlan, MealItem } from '@/lib/nutrition'
 import { getCurrentSeason } from '@/lib/nutrition'
 import { BD_FOODS } from '@/lib/foods'
@@ -141,6 +141,7 @@ export default function NutritionModule({ dashboardType }: { dashboardType: 'mot
   const [substitutes, setSubstitutes] = useState<Record<string, { food: string; amount_g: number; notes: string }>>({})
   const [dbItems, setDbItems] = useState<ChecklistItem[]>([])
   const [longPressTimer, setLongPressTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
+  const [mealLog30, setMealLog30] = useState<{ date: string; meals: { type: string; food: string }[] }[]>([])
 
   const [streak, setStreak] = useState<StreakData>({ streak: 0, points: 0, lastDate: '' })
   const [dbPoints, setDbPoints] = useState(0)
@@ -148,6 +149,7 @@ export default function NutritionModule({ dashboardType }: { dashboardType: 'mot
 
   const [review, setReview] = useState<string | null>(null)
   const [reviewLoading, setReviewLoading] = useState(false)
+  const [checklistSaved, setChecklistSaved] = useState(false)
 
   const todayKey = new Date().toISOString().split('T')[0]
 
@@ -161,6 +163,28 @@ export default function NutritionModule({ dashboardType }: { dashboardType: 'mot
     const savedStreak = localStorage.getItem('shetu_streak')
     if (savedStreak) { try { setStreak(JSON.parse(savedStreak)) } catch { /* ignore */ } }
     getTotalPoints().then(setDbPoints)
+    // Load 30-day meal log from localStorage (with real food names)
+    const log: { date: string; meals: { type: string; food: string }[] }[] = []
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(); d.setDate(d.getDate() - i)
+      const dateKey = d.toISOString().split('T')[0]
+      const raw = localStorage.getItem(`shetu_checklist_${dateKey}`)
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw) as Record<string, boolean>
+          const names: Record<string, string> = JSON.parse(localStorage.getItem(`shetu_names_${dateKey}`) ?? '{}')
+          const eaten = Object.entries(parsed)
+            .filter(([, v]) => v)
+            .map(([k]) => {
+              const nameEntry = names[k] ?? k
+              const [type, food] = nameEntry.includes(':') ? nameEntry.split(':') : [k.split('_')[0], nameEntry]
+              return { type: type ?? k.split('_')[0], food: food ?? k }
+            })
+          if (eaten.length > 0) log.push({ date: dateKey, meals: eaten })
+        } catch { /* ignore */ }
+      }
+    }
+    setMealLog30(log)
   }, [todayKey])
 
   const bmi = profile.weight_kg && profile.height_cm
@@ -192,29 +216,33 @@ export default function NutritionModule({ dashboardType }: { dashboardType: 'mot
     setHasProfile(true)
     setLoading(true)
     setError(null)
+    // Always start with a completely fresh checklist when generating a new plan
+    setChecklist({})
+    setUnavailable({})
+    setSubstitutes({})
+    localStorage.setItem(`shetu_checklist_${todayKey}`, JSON.stringify({}))
     try {
       const result = await sendNutritionPlan(fp)
       setPlan(result)
       const { items } = await saveMealPlanAndChecklist(result, fp)
       setDbItems(items)
-      // Hydrate checked state from DB (source of truth) merged with local cache.
+      // Only pre-check items that were ACTUALLY eaten today in the DB (not yesterday's data)
       if (items.length > 0) {
+        const todayEaten: Record<string, boolean> = {}
         const order = [
           ...result.meal_plan.breakfast.map((f) => ({ ...f, meal: 'Breakfast' })),
           ...result.meal_plan.lunch.map((f) => ({ ...f, meal: 'Lunch' })),
           ...result.meal_plan.snack.map((f) => ({ ...f, meal: 'Snack' })),
           ...result.meal_plan.dinner.map((f) => ({ ...f, meal: 'Dinner' })),
         ]
-        const hydrated: Record<string, boolean> = {}
         order.forEach((it, idx) => {
           const match = items.find((d) => d.meal_type === it.meal.toLowerCase() && d.food_name === it.food)
-          if (match?.is_eaten) hydrated[`${it.meal}_${idx}`] = true
+          // Only pre-check if explicitly marked eaten today (not stale DB row)
+          if (match?.is_eaten) todayEaten[`${it.meal}_${idx}`] = true
         })
-        if (Object.keys(hydrated).length > 0) {
-          const merged = { ...hydrated, ...checklist }
-          localStorage.setItem(`shetu_checklist_${todayKey}`, JSON.stringify(merged))
-          setChecklist(merged)
-        }
+        // Do NOT merge with old checklist — start fresh from DB only
+        localStorage.setItem(`shetu_checklist_${todayKey}`, JSON.stringify(todayEaten))
+        setChecklist(todayEaten)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate plan')
@@ -240,6 +268,12 @@ export default function NutritionModule({ dashboardType }: { dashboardType: 'mot
 
   const saveChecklist = (updated: Record<string, boolean>) => {
     localStorage.setItem(`shetu_checklist_${todayKey}`, JSON.stringify(updated))
+    // Also persist the food-name index so the 30-day log can display real names
+    if (allItems.length > 0) {
+      const nameMap: Record<string, string> = {}
+      allItems.forEach((it, i) => { nameMap[`${it.meal}_${i}`] = `${it.meal}:${it.food}` })
+      localStorage.setItem(`shetu_names_${todayKey}`, JSON.stringify(nameMap))
+    }
     setChecklist(updated)
   }
 
@@ -656,6 +690,37 @@ export default function NutritionModule({ dashboardType }: { dashboardType: 'mot
                     </div>
                   )
                 })}
+
+                {/* Save checklist button */}
+                <button
+                  onClick={() => {
+                    saveChecklist(checklist)
+                    if (adherence >= 70) updateStreak(adherence)
+                    setChecklistSaved(true)
+                    setTimeout(() => setChecklistSaved(false), 3000)
+                  }}
+                  className={`w-full py-3.5 rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 transition-all shadow-sm ${
+                    checklistSaved
+                      ? 'bg-green-500 text-white'
+                      : 'bg-[#0E7C66] hover:bg-[#0c6b57] text-white'
+                  }`}
+                >
+                  {checklistSaved ? (
+                    <><CheckCircle size={16} /> Checklist Saved!</>
+                  ) : (
+                    <><Save size={16} /> Save My Checklist</>
+                  )}
+                </button>
+
+                {checklistSaved && adherence >= 70 && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 flex items-center gap-3 text-sm">
+                    <span className="text-2xl">🏆</span>
+                    <div>
+                      <p className="font-semibold text-amber-800">Points earned!</p>
+                      <p className="text-xs text-amber-600">{adherence >= 90 ? '+20 pts for ≥90% adherence' : '+10 pts for ≥70% adherence'}</p>
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </>
@@ -693,6 +758,41 @@ export default function NutritionModule({ dashboardType }: { dashboardType: 'mot
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* 30-day Meal Log */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-gray-600">30-Day Meal Log</h3>
+              {mealLog30.length === 0 ? (
+                <div className="bg-gray-50 rounded-2xl p-4 text-center text-xs text-gray-400">
+                  No meal history yet. Start checking off your meals to build your log!
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {mealLog30.map(entry => {
+                    const mealTypes = [...new Set(entry.meals.map(m => m.type))]
+                    const adh = Math.min(100, Math.round((entry.meals.length / 8) * 100))
+                    return (
+                      <div key={entry.date} className="bg-white rounded-xl shadow-sm p-3 flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-700">
+                            {new Date(entry.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                          </p>
+                          <div className="flex gap-1 mt-1 flex-wrap">
+                            {mealTypes.map(t => (
+                              <span key={t} className="text-[10px] px-1.5 py-0.5 bg-teal-50 text-teal-700 rounded-full capitalize">{t}</span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className={`text-sm font-bold ${adh >= 70 ? 'text-[#0E7C66]' : 'text-gray-400'}`}>{adh}%</p>
+                          <p className="text-[10px] text-gray-400">{entry.meals.length} meals</p>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
 
             <div className="space-y-3">

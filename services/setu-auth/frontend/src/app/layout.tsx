@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { CentralChatbot } from "@/components/shared/CentralChatbot";
 
 export const metadata: Metadata = {
   title: "Shetu — The AI Care Bridge",
@@ -13,7 +14,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body suppressHydrationWarning>{children}</body>
+      <body suppressHydrationWarning>
+        {children}
+        <CentralChatbot />
+      </body>
     </html>
   );
 }
