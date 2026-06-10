@@ -29,13 +29,14 @@ _GEMINI_MODELS = [
     "gemini-1.5-flash",
 ]
 
+# Reliable-first, live-verified 2026-06-11. Dead/empty-output IDs removed.
 _OPENROUTER_MODELS = [
     "openai/gpt-oss-120b:free",
-    "google/gemma-4-31b-it:free",
-    "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "openai/gpt-oss-20b:free",
     "nvidia/nemotron-3-super-120b-a12b:free",
+    "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "google/gemma-4-31b-it:free",
     "meta-llama/llama-3.3-70b-instruct:free",
-    "z-ai/glm-4.5-air:free",
 ]
 
 _REQUIRED_KEYS = (
@@ -115,15 +116,23 @@ async def _try_openrouter(prompt: str) -> Optional[dict]:
                         "model": model_id,
                         "messages": [{"role": "user", "content": prompt}],
                         "temperature": 0.3,
+                        "max_tokens": 2000,
+                        "response_format": {"type": "json_object"},
                     },
                 )
                 if resp.status_code == 200:
                     content = resp.json()["choices"][0]["message"]["content"]
+                    if not content or not content.strip():
+                        logger.warning("OpenRouter model %s returned empty content, trying next.", model_id)
+                        continue
                     result = _normalise(_parse_json(content))
                     result["generated_by_model"] = f"openrouter/{model_id}"
                     logger.info("OpenRouter model %s succeeded for maternal analysis.", model_id)
                     return result
-                logger.warning("OpenRouter model %s returned %s.", model_id, resp.status_code)
+                logger.warning(
+                    "OpenRouter model %s returned %s: %s — trying next.",
+                    model_id, resp.status_code, resp.text[:200],
+                )
         except Exception as exc:
             logger.warning("OpenRouter model %s failed: %s", model_id, exc)
     return None

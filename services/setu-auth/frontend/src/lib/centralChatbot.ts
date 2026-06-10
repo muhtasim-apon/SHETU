@@ -6,15 +6,14 @@ const OLLAMA_BASE = process.env.NEXT_PUBLIC_OLLAMA_BASE_URL ?? 'http://localhost
 
 const genAI = new GoogleGenerativeAI(GEMINI_KEY)
 
-// Only models confirmed working as of June 2026
+// Reliable-first, live-verified 2026-06-11. Removed kimi-k2.6 (404 not-free).
 const OPENROUTER_MODELS = [
   { model: 'openai/gpt-oss-20b:free', vision: false },
-  { model: 'moonshotai/kimi-k2.6:free', vision: false },
   { model: 'openai/gpt-oss-120b:free', vision: false },
-  { model: 'google/gemma-4-31b-it:free', vision: false },
   { model: 'nvidia/nemotron-3-super-120b-a12b:free', vision: false },
+  { model: 'nvidia/nemotron-3-ultra-550b-a55b:free', vision: false },
+  { model: 'google/gemma-4-31b-it:free', vision: false },
   { model: 'meta-llama/llama-3.3-70b-instruct:free', vision: false },
-  { model: 'nousresearch/hermes-3-llama-3.1-405b:free', vision: false },
 ]
 
 const GEMINI_MODELS = [

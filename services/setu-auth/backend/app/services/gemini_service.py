@@ -27,14 +27,16 @@ _GEMINI_MODELS = [
     "gemini-flash-latest",
 ]
 
-# OpenRouter free models confirmed working (tested 2026-06-07)
+# OpenRouter free models — reliable-first (live-verified 2026-06-11).
+# Removed dead IDs (z-ai/glm-4.5-air, moonshotai/kimi-k2.6 -> 404 not-free) and
+# the nano-omni reasoning model (emits empty content). gemma/llama kept as
+# lower-priority fallbacks since they intermittently 429.
 _OPENROUTER_MODELS = [
     "openai/gpt-oss-120b:free",
-    "google/gemma-4-31b-it:free",
-    "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "openai/gpt-oss-20b:free",
     "nvidia/nemotron-3-super-120b-a12b:free",
-    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-    "z-ai/glm-4.5-air:free",
+    "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "google/gemma-4-31b-it:free",
     "meta-llama/llama-3.3-70b-instruct:free",
 ]
 
@@ -131,16 +133,24 @@ async def _try_openrouter_chain(prompt: str) -> Optional[dict]:
                         "model": model_id,
                         "messages": [{"role": "user", "content": prompt}],
                         "temperature": 0.3,
+                        "max_tokens": 2000,
+                        "response_format": {"type": "json_object"},
                     },
                 )
                 if resp.status_code == 200:
                     content = resp.json()["choices"][0]["message"]["content"]
+                    if not content or not content.strip():
+                        logger.warning("OpenRouter model %s returned empty content, trying next.", model_id)
+                        continue
                     result = _normalise(_parse_json(content))
                     result["generated_by_model"] = f"openrouter/{model_id}"
                     logger.info("OpenRouter model %s succeeded for health analysis.", model_id)
                     return result
                 else:
-                    logger.warning("OpenRouter model %s returned %s, trying next.", model_id, resp.status_code)
+                    logger.warning(
+                        "OpenRouter model %s returned %s: %s — trying next.",
+                        model_id, resp.status_code, resp.text[:200],
+                    )
         except Exception as exc:  # noqa: BLE001
             logger.warning("OpenRouter model %s failed: %s, trying next.", model_id, exc)
 

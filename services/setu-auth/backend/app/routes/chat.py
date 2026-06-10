@@ -30,13 +30,13 @@ _GEMINI_MODELS = [
     "gemini-flash-latest",
 ]
 
+# Reliable-first, live-verified 2026-06-11. Dead/empty-output IDs removed.
 _OPENROUTER_MODELS = [
+    "openai/gpt-oss-20b:free",
     "openai/gpt-oss-120b:free",
-    "google/gemma-4-31b-it:free",
-    "nvidia/nemotron-3-ultra-550b-a55b:free",
     "nvidia/nemotron-3-super-120b-a12b:free",
-    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-    "z-ai/glm-4.5-air:free",
+    "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "google/gemma-4-31b-it:free",
     "meta-llama/llama-3.3-70b-instruct:free",
 ]
 
@@ -85,14 +85,21 @@ async def _call_openrouter_chain(messages: list[dict]) -> Optional[tuple[str, st
                     json={
                         "model": model_id,
                         "messages": [{"role": "system", "content": _SYSTEM_PROMPT}] + messages,
+                        "max_tokens": 1000,
                     },
                 )
                 if resp.status_code == 200:
                     content = resp.json()["choices"][0]["message"]["content"]
+                    if not content or not content.strip():
+                        logger.warning("OpenRouter model %s returned empty content, trying next.", model_id)
+                        continue
                     logger.info("OpenRouter model %s succeeded for chat.", model_id)
                     return content, model_id
                 else:
-                    logger.warning("OpenRouter model %s returned %s, trying next.", model_id, resp.status_code)
+                    logger.warning(
+                        "OpenRouter model %s returned %s: %s — trying next.",
+                        model_id, resp.status_code, resp.text[:200],
+                    )
         except Exception as exc:
             logger.warning("OpenRouter model %s chat failed: %s, trying next.", model_id, exc)
     return None
