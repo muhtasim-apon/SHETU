@@ -99,11 +99,20 @@ async function fetchProfile(
   };
 }
 
+// Base URL used in the confirmation email's redirect link. Prefer an explicit
+// NEXT_PUBLIC_SITE_URL (set this to the deployed origin in Vercel) so the link
+// never points at a bare `localhost` that "refused to connect"; fall back to
+// the current browser origin for local dev.
+function siteOrigin(): string | undefined {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+  if (configured) return configured;
+  if (typeof window !== "undefined") return window.location.origin;
+  return undefined;
+}
+
 export async function signUp(data: SignUpData): Promise<MessageResponse> {
-  const emailRedirectTo =
-    typeof window !== "undefined"
-      ? `${window.location.origin}/auth/callback`
-      : undefined;
+  const origin = siteOrigin();
+  const emailRedirectTo = origin ? `${origin}/auth/callback` : undefined;
 
   const { data: result, error } = await authClient().auth.signUp({
     email: data.email,
