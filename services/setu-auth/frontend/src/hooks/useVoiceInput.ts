@@ -34,8 +34,20 @@ interface UseVoiceInputOptions {
   onError?: (err: string) => void
 }
 
+// A "secure context" (HTTPS, or localhost/127.0.0.1) is required for both
+// getUserMedia and SpeechRecognition. When the app is opened from another
+// device over a plain-HTTP LAN address, mic features are silently unavailable.
+function isSecureContextForMedia(): boolean {
+  if (typeof window === 'undefined') return false
+  if (window.isSecureContext) return true
+  const host = window.location.hostname
+  return host === 'localhost' || host === '127.0.0.1' || host === '[::1]'
+}
+
 export function useVoiceInput({ language = 'en-US', continuous = false, onResult, onError }: UseVoiceInputOptions) {
   const [listening, setListening] = useState(false)
+  // `supported` is undefined during SSR / first render, then resolves on mount.
+  const [supported, setSupported] = useState<boolean | undefined>(undefined)
   const recognitionRef = useRef<ISpeechRecognition | null>(null)
   // Keep latest callbacks/flags in refs so the recognition event handlers
   // (bound once per start) never read stale closures.
@@ -44,6 +56,11 @@ export function useVoiceInput({ language = 'en-US', continuous = false, onResult
   const continuousRef = useRef(continuous)
   const languageRef = useRef(language)
   const wantListeningRef = useRef(false)
+
+  // Resolve support once mounted (window/navigator are only available client-side).
+  useEffect(() => {
+    setSupported(!!getSpeechRecognition() && isSecureContextForMedia())
+  }, [])
 
   useEffect(() => { onResultRef.current = onResult }, [onResult])
   useEffect(() => { onErrorRef.current = onError }, [onError])
@@ -118,6 +135,19 @@ export function useVoiceInput({ language = 'en-US', continuous = false, onResult
 
   const start = useCallback(async () => {
     wantListeningRef.current = true
+    // Block early with a clear message when the page isn't a secure context.
+    // This is the usual reason voice fails on a phone/other device that opens
+    // the app via a plain http:// LAN address instead of localhost/HTTPS.
+    if (!isSecureContextForMedia()) {
+      onErrorRef.current?.('Voice input needs a secure (HTTPS) connection. Open the app over https:// to use the mic on this device.')
+      wantListeningRef.current = false
+      return
+    }
+    if (!getSpeechRecognition() || !navigator.mediaDevices?.getUserMedia) {
+      onErrorRef.current?.('Voice input is not supported in this browser.')
+      wantListeningRef.current = false
+      return
+    }
     // Prime microphone permission explicitly — this reliably surfaces the
     // browser permission prompt before SpeechRecognition tries to use the mic.
     try {
@@ -141,5 +171,5 @@ export function useVoiceInput({ language = 'en-US', continuous = false, onResult
 
   useEffect(() => () => { wantListeningRef.current = false; try { recognitionRef.current?.abort() } catch { /* ignore */ } }, [])
 
-  return { listening, start, stop, toggle }
+  return { listening, supported, start, stop, toggle }
 }

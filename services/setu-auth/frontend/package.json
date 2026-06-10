@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:wsl": "WATCHPACK_POLLING=true CHOKIDAR_USEPOLLING=true next dev",
+    "dev:https": "next dev --experimental-https -H 0.0.0.0",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"

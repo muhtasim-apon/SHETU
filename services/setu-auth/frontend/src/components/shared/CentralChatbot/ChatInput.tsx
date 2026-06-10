@@ -36,10 +36,11 @@ async function extractPdfText(base64: string): Promise<string> {
 export default function ChatInput({ onSend, disabled, voiceMode, language = 'en-US' }: ChatInputProps) {
   const [text, setText] = useState('')
   const [file, setFile] = useState<AttachedFile | null>(null)
+  const [voiceError, setVoiceError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  const { listening, toggle: toggleVoice } = useVoiceInput({
+  const { listening, supported: voiceSupported, toggle: toggleVoice } = useVoiceInput({
     language,
     continuous: voiceMode,
     onResult: (transcript, isFinal) => {
@@ -51,7 +52,10 @@ export default function ChatInput({ onSend, disabled, voiceMode, language = 'en-
         }, 400)
       }
     },
-    onError: (err) => console.warn('[Voice]', err),
+    onError: (err) => {
+      console.warn('[Voice]', err)
+      setVoiceError(err)
+    },
   })
 
   function handleSend(overrideText?: string) {
@@ -122,6 +126,15 @@ export default function ChatInput({ onSend, disabled, voiceMode, language = 'en-
         </div>
       )}
 
+      {voiceError && (
+        <div className="flex items-start gap-2 mb-2 p-2 bg-amber-50 rounded-xl border border-amber-100">
+          <p className="flex-1 text-[11px] leading-snug text-amber-700">{voiceError}</p>
+          <button onClick={() => setVoiceError(null)} className="text-amber-400 hover:text-amber-600 transition-colors flex-shrink-0 p-0.5">
+            <X size={12} />
+          </button>
+        </div>
+      )}
+
       <div className="flex items-end gap-1.5">
         <button
           onClick={() => fileRef.current?.click()}
@@ -152,12 +165,16 @@ export default function ChatInput({ onSend, disabled, voiceMode, language = 'en-
         />
 
         <button
-          onClick={toggleVoice}
-          disabled={disabled}
-          className={`flex-shrink-0 p-2 transition-colors disabled:opacity-40 ${
+          onClick={() => { setVoiceError(null); toggleVoice() }}
+          disabled={disabled || voiceSupported === false}
+          className={`flex-shrink-0 p-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
             listening ? 'text-red-500' : 'text-gray-400 hover:text-purple-600'
           }`}
-          title={listening ? 'Stop recording' : 'Voice input'}
+          title={
+            voiceSupported === false
+              ? 'Voice input needs an HTTPS connection on this device'
+              : listening ? 'Stop recording' : 'Voice input'
+          }
         >
           {listening ? <MicOff size={19} className="animate-pulse" /> : <Mic size={19} />}
         </button>
