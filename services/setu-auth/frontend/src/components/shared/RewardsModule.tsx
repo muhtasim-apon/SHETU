@@ -60,6 +60,11 @@ export default function RewardsModule({ dashboardType }: { dashboardType: 'mothe
   const completedToday = snap?.streak.lastDate === today
   const hasShield = (snap?.shield.shield ?? 0) > 0
 
+  const totalPoints = snap?.totalPoints ?? 0
+  const rewardLevel = totalPoints < 50 ? 'Bronze' : totalPoints < 150 ? 'Silver' : totalPoints < 400 ? 'Gold' : 'Platinum'
+  const nextLevelAt = totalPoints < 50 ? 50 : totalPoints < 150 ? 150 : totalPoints < 400 ? 400 : null
+  const levelProgress = nextLevelAt ? Math.min(100, Math.round((totalPoints / nextLevelAt) * 100)) : 100
+
   return (
     <div className="min-h-screen bg-[#F4FAF8] pb-12">
       <header className="bg-[#0E7C66] text-white px-5 pt-6 pb-5">
@@ -123,25 +128,61 @@ export default function RewardsModule({ dashboardType }: { dashboardType: 'mothe
           <span className={`text-2xl font-bold ${hasShield ? 'text-emerald-500' : 'text-gray-300'}`}>{snap?.shield.shield ?? 0}</span>
         </div>
 
-        {/* bKash cashback balance */}
-        <div className="bg-white rounded-2xl shadow-sm p-5">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-pink-50 flex items-center justify-center">
-              <Wallet size={24} className="text-pink-500" />
+        {/* Health Card — reward points */}
+        <div className="relative rounded-2xl overflow-hidden shadow-md" style={{ background: 'linear-gradient(135deg, #0A2E2A 0%, #0E7C66 60%, #13A37F 100%)' }}>
+          <div className="absolute -top-6 -right-6 w-28 h-28 rounded-full opacity-10 bg-white" />
+          <div className="absolute -bottom-4 -left-4 w-20 h-20 rounded-full opacity-10 bg-white" />
+          <div className="relative p-5 space-y-4">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-[10px] text-white/60 tracking-widest font-semibold">SHETU HEALTH CARD</p>
+                <p className="text-[18px] font-bold text-white mt-0.5">{rewardLevel} Member</p>
+              </div>
+              <div className="w-11 h-11 rounded-2xl bg-white/15 flex items-center justify-center">
+                <Wallet size={22} className="text-white" />
+              </div>
             </div>
-            <div className="flex-1">
-              <p className="font-semibold text-gray-800">Reward Balance</p>
-              <p className="text-xs text-gray-500">bKash micro-cashback (simulated)</p>
+
+            <div className="grid grid-cols-3 gap-3 bg-white/10 rounded-xl p-3">
+              <div className="text-center">
+                <p className="text-[10px] text-white/60">Points</p>
+                <p className="text-[18px] font-bold text-white">{totalPoints}</p>
+              </div>
+              <div className="text-center border-x border-white/20">
+                <p className="text-[10px] text-white/60">Streak</p>
+                <p className="text-[18px] font-bold text-white">{streak}d</p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] text-white/60">Shield</p>
+                <p className="text-[18px] font-bold text-white">{snap?.shield.shield ?? 0}</p>
+              </div>
             </div>
-            <p className="text-2xl font-bold text-pink-600">৳{snap?.balanceTk?.toFixed(2) ?? '0.00'}</p>
+
+            {/* Progress to next level */}
+            <div className="space-y-1">
+              <div className="flex justify-between text-[10px] text-white/50">
+                <span>{rewardLevel}</span>
+                <span>{nextLevelAt ? `${totalPoints}/${nextLevelAt}` : 'Max level'}</span>
+              </div>
+              <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
+                <div className="h-full rounded-full bg-white/80" style={{ width: `${levelProgress}%` }} />
+              </div>
+            </div>
           </div>
-          <button
-            disabled
-            title="bKash redemption coming soon"
-            className="mt-4 w-full rounded-xl bg-gray-100 text-gray-400 py-2.5 text-sm font-medium cursor-not-allowed"
-          >
-            Redeem to bKash (coming soon)
-          </button>
+        </div>
+
+        {/* How points are earned */}
+        <div className="bg-white rounded-2xl shadow-sm p-5 space-y-2">
+          <h2 className="font-semibold text-gray-800 mb-1">How you earn points</h2>
+          <div className="flex justify-between text-sm text-gray-500">
+            <span>≥70% daily plan adherence</span><span className="font-semibold text-[#0E7C66]">+10 pts</span>
+          </div>
+          <div className="flex justify-between text-sm text-gray-500">
+            <span>≥90% daily plan adherence</span><span className="font-semibold text-[#0E7C66]">+20 pts</span>
+          </div>
+          <div className="flex justify-between text-sm text-gray-500 pt-1 border-t border-gray-100">
+            <span>Total points earned</span><span className="font-bold text-[#0E7C66]">{totalPoints} pts</span>
+          </div>
         </div>
 
         {/* Nutrient passport */}

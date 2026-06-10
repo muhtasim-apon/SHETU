@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { MessageCircle, Activity, Phone, Calendar, AlertTriangle } from 'lucide-react'
+import { MessageCircle, Phone, AlertTriangle } from 'lucide-react'
 import {
   useMother,
   formatEDD,
@@ -78,28 +78,17 @@ export default function PregnancyDashboard() {
         <p className="text-xs text-gray-400 text-right mt-1">{weeksLeft} weeks to go</p>
       </div>
 
-      {/* 2×2 Action Grid */}
-      <div className="grid grid-cols-2 gap-3 mx-4 mt-4">
+      {/* Action Grid */}
+      <div className="mx-4 mt-4">
         <button
           onClick={() => router.push('/dashboard/mother/pregnancy/chat')}
-          className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-left hover:shadow-md transition-shadow"
+          className="w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-left hover:shadow-md transition-shadow"
         >
           <div className="w-10 h-10 rounded-full bg-[#0E7C66] flex items-center justify-center mb-3">
             <MessageCircle size={20} className="text-white" />
           </div>
           <p className="font-semibold text-[15px] text-gray-800">Chat with Maa</p>
           <p className="text-xs text-gray-500 mt-0.5">Your AI care companion</p>
-        </button>
-
-        <button
-          onClick={() => router.push('/dashboard/mother/pregnancy/vitals')}
-          className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-left hover:shadow-md transition-shadow"
-        >
-          <div className="w-10 h-10 rounded-full bg-[#0E7C66] flex items-center justify-center mb-3">
-            <Activity size={20} className="text-white" />
-          </div>
-          <p className="font-semibold text-[15px] text-gray-800">Log Vitals</p>
-          <p className="text-xs text-gray-500 mt-0.5">BP · Weight · Temp · Pulse</p>
         </button>
       </div>
 
@@ -120,22 +109,6 @@ export default function PregnancyDashboard() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
       </button>
-
-      {/* ANC Schedule Card */}
-      <div className="mx-4 mt-3 bg-amber-50 rounded-2xl border border-amber-100 p-4 flex items-start gap-3">
-        <Calendar size={20} className="text-amber-500 mt-0.5 shrink-0" />
-        <div>
-          <p className="font-semibold text-amber-700">ANC Schedule</p>
-          <p className="text-[13px] text-amber-600 mt-1">
-            WHO recommends 8 antenatal visits. Schedule your first visit soon!
-          </p>
-          {(pregnancy.anc_count ?? 0) > 0 && (
-            <p className="text-xs text-amber-700 mt-1 font-medium">
-              ✓ {pregnancy.anc_count} visits completed
-            </p>
-          )}
-        </div>
-      </div>
 
       {/* Danger Signs Card */}
       <div className="mx-4 mt-3 mb-24 bg-red-50 rounded-2xl border border-red-100 p-4 flex items-start gap-3">

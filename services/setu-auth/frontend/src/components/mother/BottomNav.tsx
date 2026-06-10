@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { Home, MessageCircle, Activity, Phone } from 'lucide-react'
+import { Home, MessageCircle, Phone } from 'lucide-react'
 
 type Tab = 'home' | 'chat' | 'vitals' | 'sos'
 
@@ -12,7 +12,6 @@ interface Props {
 const tabs: Array<{ id: Tab; label: string; icon: React.ElementType; href: string }> = [
   { id: 'home', label: 'Home', icon: Home, href: '/dashboard/mother/pregnancy' },
   { id: 'chat', label: 'Maa', icon: MessageCircle, href: '/dashboard/mother/pregnancy/chat' },
-  { id: 'vitals', label: 'Vitals', icon: Activity, href: '/dashboard/mother/pregnancy/vitals' },
   { id: 'sos', label: 'SOS', icon: Phone, href: '/dashboard/mother/pregnancy/sos' },
 ]
 
@@ -21,7 +20,7 @@ export default function BottomNav({ activeTab }: Props) {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-lg z-40">
-      <div className="max-w-md mx-auto grid grid-cols-4">
+      <div className="max-w-md mx-auto grid grid-cols-3">
         {tabs.map(({ id, label, icon: Icon, href }) => {
           const active = activeTab === id
           const color = active

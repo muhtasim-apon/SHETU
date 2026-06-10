@@ -9,28 +9,28 @@ import type { UserProfile } from "@/lib/api";
 const MODULES = [
   {
     id: "pregnancy",
-    name: "Pregnancy",
+    name: "Maa",
     description: "Track your pregnancy journey, milestones, and prenatal care.",
     icon: Baby,
     href: "/dashboard/mother/pregnancy",
   },
   {
     id: "health-assistant",
-    name: "Health Assistant",
+    name: "Saathi",
     description: "AI-powered chat for health queries and personalised guidance.",
     icon: MessageSquare,
     href: "/dashboard/mother/health-assistant",
   },
   {
     id: "risk-prediction",
-    name: "Risk Prediction",
+    name: "Srishti",
     description: "Predict maternal and fetal health risks based on your vitals.",
     icon: Activity,
     href: "/dashboard/mother/risk-prediction",
   },
   {
     id: "nutrition",
-    name: "Nutrition",
+    name: "Pushti",
     description: "Personalised nutrition plans for you and your baby.",
     icon: Leaf,
     href: "/dashboard/mother/nutrition",
@@ -38,16 +38,9 @@ const MODULES = [
   {
     id: "rewards",
     name: "Rewards",
-    description: "Track your daily streak, cashback balance, and nutrient passport.",
+    description: "Track your daily streak, health card points, and nutrient passport.",
     icon: Gift,
     href: "/dashboard/mother/rewards",
-  },
-  {
-    id: "profile",
-    name: "Profile",
-    description: "View and edit your account details and profile photo.",
-    icon: UserCircle,
-    href: "/dashboard/mother/profile",
   },
 ] as const;
 

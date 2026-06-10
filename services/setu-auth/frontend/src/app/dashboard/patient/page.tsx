@@ -9,21 +9,21 @@ import type { UserProfile } from "@/lib/api";
 const MODULES = [
   {
     id: "health-assistant",
-    name: "Health Assistant",
+    name: "Saathi",
     description: "AI-powered chat for health queries and personalised guidance.",
     icon: MessageSquare,
     href: "/dashboard/patient/health-assistant",
   },
   {
     id: "risk-prediction",
-    name: "Risk Prediction",
+    name: "Srishti",
     description: "Predict health risks based on your profile and vitals.",
     icon: Activity,
     href: "/dashboard/patient/risk-prediction",
   },
   {
     id: "nutrition",
-    name: "Nutrition",
+    name: "Pushti",
     description: "Personalised nutrition plans and dietary tracking.",
     icon: Leaf,
     href: "/dashboard/patient/nutrition",
@@ -31,16 +31,9 @@ const MODULES = [
   {
     id: "rewards",
     name: "Rewards",
-    description: "Track your daily streak, cashback balance, and nutrient passport.",
+    description: "Track your daily streak, health card points, and nutrient passport.",
     icon: Gift,
     href: "/dashboard/patient/rewards",
-  },
-  {
-    id: "profile",
-    name: "Profile",
-    description: "View and edit your account details and profile photo.",
-    icon: UserCircle,
-    href: "/dashboard/patient/profile",
   },
 ] as const;
 

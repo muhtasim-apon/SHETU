@@ -799,22 +799,17 @@ export default function NutritionModule({ dashboardType }: { dashboardType: 'mot
 
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-gray-600">Redeem Points</h3>
-              {[
-                { title: 'Redeem via bKash', desc: 'Transfer points to bKash — coming soon', gradient: 'from-pink-500 to-rose-500' },
-                { title: 'Health Card Credit', desc: 'Apply points to Shetu health card', gradient: 'from-teal-500 to-[#0E7C66]' },
-              ].map((card) => (
-                <button key={card.title} onClick={() => setShowComingSoon(true)}
-                  className="w-full text-left rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
-                >
-                  <div className={`bg-gradient-to-r ${card.gradient} p-4 flex items-center justify-between`}>
-                    <div>
-                      <p className="font-semibold text-white text-sm">{card.title}</p>
-                      <p className="text-xs text-white/70 mt-0.5">{card.desc}</p>
-                    </div>
-                    <span className="text-white/60 text-xl font-light">→</span>
+              <button onClick={() => setShowComingSoon(true)}
+                className="w-full text-left rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+              >
+                <div className="bg-gradient-to-r from-teal-500 to-[#0E7C66] p-4 flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-white text-sm">Health Card Credit</p>
+                    <p className="text-xs text-white/70 mt-0.5">Apply points to your Shetu health card</p>
                   </div>
-                </button>
-              ))}
+                  <span className="text-white/60 text-xl font-light">→</span>
+                </div>
+              </button>
             </div>
           </>
         )}
@@ -894,7 +889,7 @@ export default function NutritionModule({ dashboardType }: { dashboardType: 'mot
               <h3 className="font-bold text-gray-800">Coming Soon</h3>
               <button onClick={() => setShowComingSoon(false)} className="p-1 hover:bg-gray-100 rounded-lg"><X size={18} className="text-gray-500" /></button>
             </div>
-            <p className="text-sm text-gray-500">bKash and health card redemption is under development. Your points are being tracked and will be redeemable soon!</p>
+            <p className="text-sm text-gray-500">Health card redemption is under development. Your points are being tracked and will be redeemable soon!</p>
             <button onClick={() => setShowComingSoon(false)} className="w-full py-2.5 rounded-xl bg-[#0E7C66] text-white text-sm font-semibold">Got it</button>
           </div>
         </div>
