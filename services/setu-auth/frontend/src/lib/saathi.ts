@@ -40,6 +40,8 @@ export async function saathiFetch<T>(path: string, init?: RequestInit): Promise<
 export const saathiGet = <T>(path: string) => saathiFetch<T>(path);
 export const saathiPost = <T>(path: string, data?: unknown) =>
   saathiFetch<T>(path, { method: "POST", body: data ? JSON.stringify(data) : undefined });
+export const saathiPut = <T>(path: string, data?: unknown) =>
+  saathiFetch<T>(path, { method: "PUT", body: data ? JSON.stringify(data) : undefined });
 export const saathiPatch = <T>(path: string, data?: unknown) =>
   saathiFetch<T>(path, { method: "PATCH", body: data ? JSON.stringify(data) : undefined });
 export const saathiDelete = <T>(path: string) =>

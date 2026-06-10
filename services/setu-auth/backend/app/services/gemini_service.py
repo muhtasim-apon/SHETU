@@ -47,9 +47,16 @@ _REQUIRED_KEYS = (
 
 def _build_prompt(vitals_data, checkin_data, goals_data, patient_context, language) -> str:
     lang_word = "Bangla" if language == "bn" else "English"
+    lang_directive = (
+        "\nIMPORTANT: Respond ENTIRELY in Bangla (Bengali script — বাংলা). EVERY field "
+        "below — summaries, risk_factors, recommendations, alerts, advice, feedback and "
+        "all interpretations — MUST be written in Bengali. Do NOT use English.\n"
+        if language == "bn" else ""
+    )
     return f"""
 You are Shetu Saathi, an AI health companion for general patients in Bangladesh.
 Analyze the health data below and provide a structured JSON response.
+{lang_directive}
 
 PATIENT CONTEXT:
 {json.dumps(patient_context, indent=2, default=str)}

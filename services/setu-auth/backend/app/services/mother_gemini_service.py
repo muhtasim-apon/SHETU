@@ -46,8 +46,15 @@ _REQUIRED_KEYS = (
 
 def _build_prompt(vitals_agg: dict, pregnancy_context: dict, language: str) -> str:
     lang_word = "Bangla" if language == "bn" else "English"
+    lang_directive = (
+        "\nIMPORTANT: Respond ENTIRELY in Bangla (Bengali script — বাংলা). EVERY field — "
+        "summaries, risk_factors, recommendations, alerts, advice and tips — MUST be written "
+        "in Bengali. Do NOT use English.\n"
+        if language == "bn" else ""
+    )
     return f"""You are Shetu Saathi, an AI maternal health assistant for pregnant mothers in Bangladesh.
 Analyze prenatal health data for a {pregnancy_context.get('trimester', 'unknown')} trimester ({pregnancy_context.get('gestational_age_weeks', '?')} weeks) pregnant mother, due {pregnancy_context.get('edd', 'unknown')}.
+{lang_directive}
 ANC VISITS COMPLETED: {pregnancy_context.get('anc_count', 0)} (WHO recommends 8 minimum)
 VITALS SUMMARY: {json.dumps(vitals_agg, indent=2, default=str)}
 

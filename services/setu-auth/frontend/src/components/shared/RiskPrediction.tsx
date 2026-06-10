@@ -233,18 +233,20 @@ export default function RiskPrediction({ dashboardType }: { dashboardType: 'moth
             <div className="bg-white rounded-2xl shadow-sm p-5 space-y-4">
               <h2 className="font-semibold text-gray-700">Patient Profile</h2>
 
-              <div className="space-y-1">
-                <label className="text-xs text-gray-500">Gender</label>
-                <select
-                  value={profile.gender}
-                  onChange={(e) => setProfile((p) => ({ ...p, gender: e.target.value as RiskProfile['gender'], pregnant: false }))}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-800 bg-white focus:outline-none focus:border-[#0E7C66] focus:ring-1 focus:ring-[#0E7C66]"
-                >
-                  <option value="female">Female</option>
-                  <option value="male">Male</option>
-                  <option value="third-gender">Third-gender</option>
-                </select>
-              </div>
+              {dashboardType !== 'mother' && (
+                <div className="space-y-1">
+                  <label className="text-xs text-gray-500">Gender</label>
+                  <select
+                    value={profile.gender}
+                    onChange={(e) => setProfile((p) => ({ ...p, gender: e.target.value as RiskProfile['gender'], pregnant: false }))}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-800 bg-white focus:outline-none focus:border-[#0E7C66] focus:ring-1 focus:ring-[#0E7C66]"
+                  >
+                    <option value="female">Female</option>
+                    <option value="male">Male</option>
+                    <option value="third-gender">Third-gender</option>
+                  </select>
+                </div>
+              )}
 
               {profile.gender === 'female' && (
                 <div className="space-y-1">

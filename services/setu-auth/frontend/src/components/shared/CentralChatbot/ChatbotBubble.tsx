@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
-import { X, Minus, Mic, MicOff, Volume2, VolumeX } from 'lucide-react'
+import { useState, useCallback, useRef, useEffect } from 'react'
+import { AnimatePresence, motion, useMotionValue } from 'framer-motion'
+import { X, Minus, Mic, MicOff, Volume2, VolumeX, Bot } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { sendChatMessage, CENTRAL_SYSTEM_PROMPT, type ChatMessage, type AttachedFile } from '@/lib/centralChatbot'
 import { parseActions, fillReactInput, getPageLabel } from '@/lib/chatbotActions'
@@ -26,6 +26,23 @@ export default function ChatbotBubble() {
   const ctx = useChatbotContext()
   const { speak, stop: stopSpeaking } = useVoiceOutput()
   const router = useRouter()
+
+  // Draggable bubble (Messenger chat-head style). Position is an offset from the
+  // default bottom-right anchor, persisted to localStorage across renders.
+  const dragX = useMotionValue(0)
+  const dragY = useMotionValue(0)
+  const draggedRef = useRef(false)
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('shetu_bubble_pos')
+      if (raw) {
+        const { x, y } = JSON.parse(raw) as { x: number; y: number }
+        if (typeof x === 'number') dragX.set(x)
+        if (typeof y === 'number') dragY.set(y)
+      }
+    } catch { /* ignore */ }
+  }, [dragX, dragY])
 
   const pushMessage = useCallback((msg: ChatMessage) => {
     messagesRef.current = [...messagesRef.current, msg]
@@ -119,13 +136,25 @@ export default function ChatbotBubble() {
     }
   }, [ctx, open, minimized, voiceOutputEnabled, speak, stopSpeaking, pushMessage, router])
 
-  function handleOpen() {
-    setOpen(true)
-    setMinimized(false)
-    setHasUnread(false)
-  }
-
   const panelVisible = open && !minimized
+
+  function handleBubbleTap() {
+    // Ignore the click that fires at the end of a drag gesture.
+    if (draggedRef.current) {
+      draggedRef.current = false
+      return
+    }
+    if (panelVisible) {
+      // Second tap → close.
+      setOpen(false)
+      setMinimized(false)
+    } else {
+      // First tap → open.
+      setOpen(true)
+      setMinimized(false)
+      setHasUnread(false)
+    }
+  }
 
   return (
     <>
@@ -146,7 +175,7 @@ export default function ChatbotBubble() {
             {/* Header */}
             <div className="flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-purple-600 via-purple-500 to-pink-500 flex-shrink-0">
               <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                <span className="text-white text-sm select-none">✦</span>
+                <Bot size={18} className="text-white select-none" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-white font-semibold text-sm leading-none">Shetu AI</p>
@@ -187,6 +216,13 @@ export default function ChatbotBubble() {
               </button>
             </div>
 
+            {/* Greeting popup */}
+            <div className="px-4 pt-3 pb-2 bg-white flex-shrink-0">
+              <p className="text-sm font-semibold text-gray-800">Hi, I&apos;m your AI assistant</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">Ask me anything about your health or the app</p>
+              <div className="mt-2 border-b border-gray-100" />
+            </div>
+
             <div className="flex-1 min-h-0">
               <ChatPanel
                 messages={messages}
@@ -200,16 +236,29 @@ export default function ChatbotBubble() {
         )}
       </AnimatePresence>
 
-      {/* Floating bubble */}
+      {/* Floating bubble — draggable chat head */}
       <motion.button
-        onClick={panelVisible ? () => setMinimized(true) : handleOpen}
+        drag
+        dragMomentum={false}
+        dragElastic={0}
+        style={{ x: dragX, y: dragY }}
+        onDragStart={() => { draggedRef.current = true }}
+        onDragEnd={() => {
+          try {
+            localStorage.setItem(
+              'shetu_bubble_pos',
+              JSON.stringify({ x: dragX.get(), y: dragY.get() })
+            )
+          } catch { /* ignore */ }
+        }}
+        onClick={handleBubbleTap}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.92 }}
-        className="fixed bottom-4 right-4 z-[9999] w-16 h-16 rounded-full shadow-2xl bg-gradient-to-br from-purple-500 via-purple-600 to-pink-500 flex items-center justify-center"
-        title="Open Shetu AI"
+        className="fixed bottom-4 right-4 z-[9999] w-16 h-16 rounded-full shadow-2xl bg-gradient-to-br from-purple-500 via-purple-600 to-pink-500 flex items-center justify-center cursor-grab active:cursor-grabbing touch-none"
+        title="Shetu AI — drag to move, tap to open"
         aria-label="Open Shetu AI chatbot"
       >
-        <span className="text-white text-2xl select-none">✦</span>
+        <Bot size={28} className="text-white select-none" />
         {hasUnread && (
           <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-red-500 border-2 border-white flex items-center justify-center">
             <span className="text-white text-[8px] font-bold">!</span>

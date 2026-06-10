@@ -19,11 +19,9 @@ const OPENROUTER_MODELS = [
 
 const GEMINI_MODELS = [
   'gemini-2.5-flash',
-  'gemini-2.5-pro',
   'gemini-2.0-flash',
   'gemini-2.0-flash-lite',
-  'gemini-1.5-flash',
-  'gemini-1.5-flash-8b',
+  'gemini-flash-latest',
 ]
 
 export const CENTRAL_SYSTEM_PROMPT = `You are Shetu AI, the intelligent health assistant for the Shetu platform — Bangladesh's maternal and general healthcare app. You help both pregnant mothers (Maa module) and general patients (Saathi module).
@@ -189,7 +187,23 @@ export async function sendChatMessage(
   const hasImage = !!file?.base64 && file.type.startsWith('image/')
   let lastError: unknown = null
 
-  // Tier 1: OpenRouter free models
+  // For image (vision) requests, Gemini is the reliable path — try it FIRST.
+  // OpenRouter free models here are text-only, and Ollama isn't vision-capable,
+  // so for images we must not fall through to them (that produced the
+  // misleading "Failed to fetch" from Ollama). See item 1e.
+  if (hasImage && GEMINI_KEY) {
+    for (const model of GEMINI_MODELS) {
+      try {
+        const response = await callGeminiSDK(model, systemPrompt, history, userText, file)
+        return { response, modelUsed: `gemini/${model}`, tier: 1 }
+      } catch (err) {
+        lastError = err
+        console.warn(`[Shetu AI] Gemini(vision)/${model} failed:`, (err as Error).message)
+      }
+    }
+  }
+
+  // Tier 1: OpenRouter free models (text, or vision-capable models if any)
   if (OPENROUTER_KEY) {
     for (const { model, vision } of OPENROUTER_MODELS) {
       if (hasImage && !vision) continue
@@ -203,8 +217,8 @@ export async function sendChatMessage(
     }
   }
 
-  // Tier 2: Gemini SDK (same approach as existing gemini.ts — proven to work)
-  if (GEMINI_KEY) {
+  // Tier 2: Gemini SDK (text fallback when OpenRouter is exhausted)
+  if (!hasImage && GEMINI_KEY) {
     for (const model of GEMINI_MODELS) {
       try {
         const response = await callGeminiSDK(model, systemPrompt, history, userText, file)
@@ -216,14 +230,16 @@ export async function sendChatMessage(
     }
   }
 
-  // Tier 3: Local Ollama
-  for (const model of ['llama3.2:3b', 'phi3:mini', 'llama3.2', 'mistral']) {
-    try {
-      const response = await callOllama(model, systemPrompt, history, userText)
-      if (response) return { response, modelUsed: `ollama/${model}`, tier: 3 }
-    } catch (err) {
-      lastError = err
-      console.warn(`[Shetu AI] Ollama/${model} failed:`, (err as Error).message)
+  // Tier 3: Local Ollama (text only — skip entirely for image requests)
+  if (!hasImage) {
+    for (const model of ['llama3.2:3b', 'phi3:mini', 'llama3.2', 'mistral']) {
+      try {
+        const response = await callOllama(model, systemPrompt, history, userText)
+        if (response) return { response, modelUsed: `ollama/${model}`, tier: 3 }
+      } catch (err) {
+        lastError = err
+        console.warn(`[Shetu AI] Ollama/${model} failed:`, (err as Error).message)
+      }
     }
   }
 

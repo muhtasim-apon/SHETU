@@ -100,10 +100,16 @@ async function fetchProfile(
 }
 
 export async function signUp(data: SignUpData): Promise<MessageResponse> {
+  const emailRedirectTo =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/auth/callback`
+      : undefined;
+
   const { data: result, error } = await authClient().auth.signUp({
     email: data.email,
     password: data.password,
     options: {
+      emailRedirectTo,
       data: {
         role: data.role,
         full_name: data.full_name,

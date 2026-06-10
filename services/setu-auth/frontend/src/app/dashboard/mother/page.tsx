@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Activity, Baby, ChevronRight, Leaf, LogOut, MessageSquare, User } from "lucide-react";
+import { Activity, Baby, ChevronRight, Gift, Leaf, LogOut, MessageSquare, User, UserCircle } from "lucide-react";
 
 import type { UserProfile } from "@/lib/api";
 
@@ -35,6 +35,20 @@ const MODULES = [
     icon: Leaf,
     href: "/dashboard/mother/nutrition",
   },
+  {
+    id: "rewards",
+    name: "Rewards",
+    description: "Track your daily streak, cashback balance, and nutrient passport.",
+    icon: Gift,
+    href: "/dashboard/mother/rewards",
+  },
+  {
+    id: "profile",
+    name: "Profile",
+    description: "View and edit your account details and profile photo.",
+    icon: UserCircle,
+    href: "/dashboard/mother/profile",
+  },
 ] as const;
 
 function initials(name: string) {
@@ -44,6 +58,7 @@ function initials(name: string) {
 export default function MotherDashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -52,7 +67,11 @@ export default function MotherDashboardPage() {
     if (!token) { router.replace("/auth/signin"); return; }
     const raw = localStorage.getItem("shetu_user");
     if (raw) {
-      try { setUser(JSON.parse(raw) as UserProfile); } catch { /* ignore */ }
+      try {
+        const u = JSON.parse(raw) as UserProfile & { avatar_url?: string };
+        setUser(u);
+        setAvatarUrl(u.avatar_url ?? null);
+      } catch { /* ignore */ }
     }
   }, [router]);
 
@@ -88,8 +107,11 @@ export default function MotherDashboardPage() {
               <p className="text-sm font-medium leading-none">{user?.full_name ?? "…"}</p>
               <p className="text-xs text-white/40 mt-0.5 capitalize">{user?.role}</p>
             </div>
-            <div className="w-9 h-9 rounded-full bg-[#0E7C66] flex items-center justify-center text-sm font-semibold shrink-0">
-              {user ? initials(user.full_name) : <User size={16} />}
+            <div className="w-9 h-9 rounded-full bg-[#0E7C66] overflow-hidden flex items-center justify-center text-sm font-semibold shrink-0">
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+              ) : user ? initials(user.full_name) : <User size={16} />}
             </div>
           </button>
 
@@ -99,6 +121,10 @@ export default function MotherDashboardPage() {
                 <p className="text-sm font-semibold">{user?.full_name}</p>
                 <p className="text-xs text-white/40 mt-0.5">{user?.email}</p>
               </div>
+              <button onClick={() => router.push("/dashboard/mother/profile")} className="w-full flex items-center gap-2 px-4 py-3 text-sm text-white/80 hover:bg-white/5 transition-colors">
+                <UserCircle size={15} />
+                My Profile
+              </button>
               <button onClick={signOut} className="w-full flex items-center gap-2 px-4 py-3 text-sm text-red-400 hover:bg-white/5 transition-colors">
                 <LogOut size={15} />
                 Sign out

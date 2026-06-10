@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -24,7 +24,14 @@ const inputClass =
 export default function SignInPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [verified, setVerified] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("verified") === "1") {
+      setVerified(true);
+    }
+  }, []);
 
   const {
     register,
@@ -66,6 +73,12 @@ export default function SignInPage() {
             The AI Care Bridge — সেতু
           </p>
         </div>
+
+        {verified && !error && (
+          <div className="mb-4 rounded-xl bg-green-600 text-white px-4 py-3 text-sm">
+            ✓ Email verified! You can now sign in.
+          </div>
+        )}
 
         {error && (
           <div className="mb-4 rounded-xl bg-red-600 text-white px-4 py-3 text-sm">

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ShieldCheck, Heart, User, Loader2 } from "lucide-react";
+import { Heart, User, Loader2 } from "lucide-react";
 
 import { signUp, type Role } from "@/lib/api";
 
@@ -13,9 +13,8 @@ const roleOptions: {
   role: Role;
   label: string;
   sub: string;
-  Icon: typeof ShieldCheck;
+  Icon: typeof Heart;
 }[] = [
-  { role: "admin", label: "Admin", sub: "Platform manager", Icon: ShieldCheck },
   { role: "mother", label: "Mother", sub: "Pregnant or new mother", Icon: Heart },
   { role: "patient", label: "Patient", sub: "General health user", Icon: User },
 ];
@@ -94,7 +93,7 @@ export default function SignUpPage() {
         ) : (
           <>
             {/* Step 1: role selection */}
-            <div className="grid grid-cols-3 gap-3 mb-6">
+            <div className="grid grid-cols-2 gap-3 mb-6">
               {roleOptions.map(({ role: r, label, sub, Icon }) => {
                 const selected = role === r;
                 return (

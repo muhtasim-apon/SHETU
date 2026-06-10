@@ -76,6 +76,7 @@ from app.routes.mother_vitals import router as mother_vitals_router
 from app.routes.mother_reports import router as mother_reports_router
 from app.routes.mother_doctors import router as mother_doctors_router
 from app.routes.mother_blog import router as mother_blog_router
+from app.routes.account import router as account_router
 from app.services import blog_fetcher
 
 logging.basicConfig(level=logging.INFO)
@@ -95,7 +96,8 @@ app.add_middleware(
 app.include_router(auth_router)
 for _r in (profile_router, vitals_router, checkin_router, goals_router,
            reports_router, consultancy_router, blog_router, chat_router,
-           mother_vitals_router, mother_reports_router, mother_doctors_router, mother_blog_router):
+           mother_vitals_router, mother_reports_router, mother_doctors_router, mother_blog_router,
+           account_router):
     app.include_router(_r)
 
 _scheduler = None

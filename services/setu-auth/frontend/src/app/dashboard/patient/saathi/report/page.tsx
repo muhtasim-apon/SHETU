@@ -33,7 +33,10 @@ Return ONLY valid JSON (no markdown, no prose) in exactly this shape:
 }
 Be practical, empathetic, and specific to the data provided. If alerts array is empty, return [].`
 
-async function generateClientSideAI(report: Report): Promise<{ summary: string; recommendations: string[]; alerts: string[] }> {
+async function generateClientSideAI(report: Report, lang: string = "en"): Promise<{ summary: string; recommendations: string[]; alerts: string[] }> {
+  const systemPrompt = lang === "bn"
+    ? `${AI_SYSTEM_PROMPT}\n\nIMPORTANT: Write the summary, every recommendation and every alert ENTIRELY in Bangla (Bengali script — বাংলা). Do NOT use English.`
+    : AI_SYSTEM_PROMPT
   const prompt = `Patient health report data:
 - Period: ${report.period_type} (${report.period_start} to ${report.period_end})
 - Overall risk band: ${report.overall_risk_band ?? 'not determined'}
@@ -45,7 +48,7 @@ async function generateClientSideAI(report: Report): Promise<{ summary: string; 
 
 Generate a health analysis JSON for this patient.`
 
-  const { response } = await sendChatMessage([], prompt, AI_SYSTEM_PROMPT)
+  const { response } = await sendChatMessage([], prompt, systemPrompt)
   const match = response.match(/\{[\s\S]*\}/)
   if (!match) throw new Error("Could not parse AI response")
   return JSON.parse(match[0])
@@ -80,7 +83,7 @@ export default function ReportPage() {
     if (!needsAI) return r;
     setAiLoading(true);
     try {
-      const ai = await generateClientSideAI(r);
+      const ai = await generateClientSideAI(r, lang);
       return { ...r, ai_summary: ai.summary, ai_recommendations: ai.recommendations, ai_alerts: ai.alerts };
     } catch (e) {
       console.warn('[Report] Client AI failed:', e);
