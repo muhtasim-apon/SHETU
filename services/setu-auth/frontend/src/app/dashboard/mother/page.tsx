@@ -25,7 +25,7 @@ const MODULES = [
   },
   {
     id: "risk-prediction",
-    name: "Srishti",
+    name: "Drishti",
     description: "Predict maternal and fetal health risks based on your vitals.",
     icon: Activity,
     href: "/dashboard/mother/risk-prediction",

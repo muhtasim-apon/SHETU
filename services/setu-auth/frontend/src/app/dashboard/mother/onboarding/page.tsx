@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import { ensurePatientId } from '@/lib/patient-row'
 
 type Step = 1 | 2
 
@@ -41,29 +42,24 @@ export default function OnboardingPage() {
     try {
       const raw = localStorage.getItem('shetu_user')
       if (!raw) throw new Error('Not authenticated')
-      const user = JSON.parse(raw)
       const supabase = createClient()
 
-      const patientCode =
-        'MAA-' +
-        new Date().getFullYear() +
-        '-' +
-        String(Math.floor(Math.random() * 999999)).padStart(6, '0')
+      // The patients row may already exist (created by ensurePatientId on
+      // dashboard load), so resolve/create it first and then update it.
+      const id = await ensurePatientId()
+      if (!id) throw new Error('Could not resolve patient record')
 
-      const { data, error: err } = await supabase
+      const { error: updateErr } = await supabase
         .from('patients')
-        .insert({
-          profile_id: user.id,
-          patient_code: patientCode,
+        .update({
           emergency_contact_name: contactName,
           emergency_contact_phone: contactPhone,
           emergency_contact_relation: contactRelation,
         })
-        .select('id')
-        .single()
+        .eq('id', id)
+      if (updateErr) throw updateErr
 
-      if (err) throw err
-      setPatientId(data.id)
+      setPatientId(id)
       setStep(2)
     } catch (e: unknown) {
       const msg =

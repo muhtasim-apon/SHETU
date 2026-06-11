@@ -18,7 +18,7 @@ const MODULES = [
   },
   {
     id: "risk-prediction",
-    name: "Srishti",
+    name: "Drishti",
     description: "Predict health risks based on your profile and vitals.",
     icon: Activity,
     href: "/dashboard/patient/risk-prediction",

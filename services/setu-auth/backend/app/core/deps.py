@@ -33,10 +33,21 @@ async def get_patient(current_user: dict = Depends(get_current_user)) -> dict:
             )
             rows = insert_result.data or []
         except Exception as exc:  # noqa: BLE001
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Could not create patient record: {exc}",
-            )
+            if "patients_profile_id_key" in str(exc):
+                # Row was created concurrently (e.g. duplicate request) — re-fetch it.
+                refetch = retry_network(
+                    lambda: client.table("patients")
+                    .select("*")
+                    .eq("profile_id", current_user["id"])
+                    .limit(1)
+                    .execute()
+                )
+                rows = refetch.data or []
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Could not create patient record: {exc}",
+                )
         if not rows:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
