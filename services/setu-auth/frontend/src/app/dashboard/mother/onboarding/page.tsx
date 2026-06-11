@@ -66,7 +66,11 @@ export default function OnboardingPage() {
       setPatientId(data.id)
       setStep(2)
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Something went wrong')
+      const msg =
+        e instanceof Error
+          ? e.message
+          : (e as { message?: string })?.message || 'Something went wrong'
+      setError(msg)
     } finally {
       setLoading(false)
     }
@@ -90,7 +94,11 @@ export default function OnboardingPage() {
       if (err) throw err
       router.replace('/dashboard/mother/pregnancy')
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Something went wrong')
+      const msg =
+        e instanceof Error
+          ? e.message
+          : (e as { message?: string })?.message || 'Something went wrong'
+      setError(msg)
     } finally {
       setLoading(false)
     }
