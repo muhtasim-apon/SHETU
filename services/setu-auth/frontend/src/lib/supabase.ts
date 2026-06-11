@@ -4,30 +4,50 @@ import type { CookieOptions } from "@supabase/ssr";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
+let browserClient: ReturnType<typeof createBrowserClient> | null = null;
+
 /**
  * Browser-side Supabase client for use in client components.
  *
- * Auth in this app is handled by the FastAPI backend, which returns a real
- * Supabase Auth `access_token` (stored as `shetu_token`). We forward that token
- * on every request so PostgREST runs the query as the `authenticated` role with
- * the correct `auth.uid()` — otherwise RLS policies like
- * `profile_id = auth.uid()` reject every read/write and the data never loads.
+ * The access token (stored as `shetu_token`) expires after ~1 hour. This
+ * client persists the full session (access + refresh token) and lets
+ * supabase-js auto-refresh it in the background. Whenever the session is
+ * refreshed we mirror the new access token into `shetu_token` so the rest of
+ * the app (which reads it directly for FastAPI calls) stays in sync —
+ * otherwise an expired token causes "new row violates row level security
+ * policy" once auth.uid() can no longer be resolved.
  */
 export function createClient() {
-  const token =
-    typeof window !== "undefined"
-      ? window.localStorage.getItem("shetu_token")
-      : null;
+  if (browserClient) return browserClient;
 
-  return createBrowserClient(supabaseUrl, supabaseAnonKey, {
-    global: {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    },
+  browserClient = createBrowserClient(supabaseUrl, supabaseAnonKey, {
     auth: {
-      persistSession: false,
-      autoRefreshToken: false,
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: false,
     },
   });
+
+  browserClient.auth.onAuthStateChange((_event, session) => {
+    if (typeof window === "undefined") return;
+    if (session?.access_token) {
+      window.localStorage.setItem("shetu_token", session.access_token);
+    }
+  });
+
+  return browserClient;
+}
+
+/** Call after sign-in to seed the persisted session from the auth response. */
+export async function setSupabaseSession(access_token: string, refresh_token: string) {
+  const sb = createClient();
+  await sb.auth.setSession({ access_token, refresh_token });
+}
+
+/** Call on sign-out to clear the persisted session. */
+export async function clearSupabaseSession() {
+  const sb = createClient();
+  await sb.auth.signOut();
 }
 
 /**

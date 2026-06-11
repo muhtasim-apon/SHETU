@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Activity, ChevronRight, Gift, Leaf, LogOut, MessageSquare, User, UserCircle } from "lucide-react";
 
 import type { UserProfile } from "@/lib/api";
+import { clearSupabaseSession } from "@/lib/supabase";
 
 const MODULES = [
   {
@@ -72,6 +73,7 @@ export default function PatientDashboardPage() {
   }, []);
 
   const signOut = () => {
+    clearSupabaseSession();
     localStorage.removeItem("shetu_token");
     localStorage.removeItem("shetu_user");
     router.replace("/auth/signin");

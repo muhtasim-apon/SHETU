@@ -9,6 +9,7 @@ import { z } from "zod";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 import { signIn } from "@/lib/api";
+import { setSupabaseSession } from "@/lib/supabase";
 
 const schema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -48,6 +49,7 @@ export default function SignInPage() {
       });
       localStorage.setItem("shetu_token", res.access_token);
       localStorage.setItem("shetu_user", JSON.stringify(res.user));
+      await setSupabaseSession(res.access_token, res.refresh_token);
       router.push("/dashboard");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Sign in failed.";

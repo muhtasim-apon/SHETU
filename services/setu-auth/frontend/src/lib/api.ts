@@ -46,6 +46,7 @@ export interface UserProfile {
 
 export interface AuthResponse {
   access_token: string;
+  refresh_token: string;
   token_type: string;
   user: UserProfile;
 }
@@ -143,6 +144,7 @@ export async function signIn(data: SignInData): Promise<AuthResponse> {
   if (!result.session || !result.user) throw new Error("Invalid email or password.");
 
   const accessToken = result.session.access_token;
+  const refreshToken = result.session.refresh_token;
   const u = result.user;
 
   let profile: UserProfile;
@@ -164,6 +166,7 @@ export async function signIn(data: SignInData): Promise<AuthResponse> {
 
   return {
     access_token: accessToken,
+    refresh_token: refreshToken,
     token_type: "bearer",
     user: profile,
   };
