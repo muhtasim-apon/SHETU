@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Activity, Baby, ChevronRight, Gift, Leaf, LogOut, MessageSquare, User, UserCircle } from "lucide-react";
 
@@ -89,11 +90,14 @@ export default function MotherDashboardPage() {
   return (
     <div className="min-h-screen bg-[#08231F] text-white">
       <header className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-        <div className="flex items-baseline gap-2">
-          <span className="text-2xl font-bold text-[#0E7C66] tracking-widest" style={{ fontFamily: "Georgia, serif" }}>
-            SHETU
-          </span>
-          <span className="text-xs text-white/30">সেতু</span>
+        <div className="flex items-center gap-2">
+          <Image src="/images/logo.png" alt="Shetu logo" width={36} height={36} className="h-9 w-9 object-contain" />
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-bold text-[#0E7C66] tracking-widest" style={{ fontFamily: "Georgia, serif" }}>
+              Shetu
+            </span>
+            <span className="text-xs text-white/30">সেতু</span>
+          </div>
         </div>
 
         <div className="relative" ref={dropdownRef}>

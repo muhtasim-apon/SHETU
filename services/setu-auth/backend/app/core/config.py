@@ -16,10 +16,12 @@ class Settings(BaseSettings):
     # ── Shetu Saathi (patient module) settings ──────────────────────────────
     GEMINI_API_KEY: str = ""
     OPENROUTER_API_KEY: str = ""
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OLLAMA_MODEL: str = "llama3.2"
     BMDC_API_BASE: str = "https://www.bmdc.org.bd"
-    WHO_RSS_URL: str = "https://www.who.int/feeds/entity/mediacentre/news/en/rss.xml"
+    WHO_RSS_URL: str = "https://www.who.int/rss-feeds/news-english.xml"
     CDC_RSS_URL: str = "https://tools.cdc.gov/podcasts/feed.asp?feedid=183"
-    NHS_RSS_URL: str = "https://www.nhs.uk/conditions/rss.xml"
+    NHS_RSS_URL: str = "https://www.england.nhs.uk/feed/"
     REPORT_STORAGE_PATH: str = "./generated_reports"
 
     model_config = SettingsConfigDict(

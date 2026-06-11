@@ -105,6 +105,30 @@ async def _call_openrouter_chain(messages: list[dict]) -> Optional[tuple[str, st
     return None
 
 
+async def _call_ollama(messages: list[dict]) -> Optional[str]:
+    """Final fallback — local Ollama instance."""
+    try:
+        async with httpx.AsyncClient(timeout=120) as client:
+            resp = await client.post(
+                f"{settings.OLLAMA_BASE_URL}/api/chat",
+                json={
+                    "model": settings.OLLAMA_MODEL,
+                    "messages": [{"role": "system", "content": _SYSTEM_PROMPT}] + messages,
+                    "stream": False,
+                },
+            )
+            if resp.status_code == 200:
+                content = resp.json().get("message", {}).get("content", "")
+                if content and content.strip():
+                    logger.info("Ollama model %s succeeded for chat.", settings.OLLAMA_MODEL)
+                    return content
+            else:
+                logger.warning("Ollama returned %s: %s", resp.status_code, resp.text[:200])
+    except Exception as exc:
+        logger.warning("Ollama chat failed: %s", exc)
+    return None
+
+
 @router.post("/chat", response_model=ChatResponse)
 async def health_chat(
     req: ChatRequest,
@@ -116,7 +140,13 @@ async def health_chat(
     gemini_messages = [{"role": m.role, "parts": [m.content]} for m in req.messages]
     openrouter_messages = [{"role": m.role, "content": m.content} for m in req.messages]
 
-    # 1. Try Gemini SDK models in order
+    # 1. OpenRouter model chain (primary)
+    result = await _call_openrouter_chain(openrouter_messages)
+    if result:
+        reply, model_id = result
+        return ChatResponse(reply=reply.strip(), model=f"openrouter/{model_id}")
+
+    # 2. Gemini SDK models in order (fallback)
     if _GENAI_AVAILABLE and settings.GEMINI_API_KEY:
         for model_name in _GEMINI_MODELS:
             try:
@@ -134,11 +164,10 @@ async def health_chat(
             except Exception as exc:
                 logger.warning("Gemini %s chat failed: %s", model_name, exc)
 
-    # 2. OpenRouter model chain fallback
-    result = await _call_openrouter_chain(openrouter_messages)
-    if result:
-        reply, model_id = result
-        return ChatResponse(reply=reply.strip(), model=f"openrouter/{model_id}")
+    # 3. Local Ollama (final fallback)
+    reply = await _call_ollama(openrouter_messages)
+    if reply:
+        return ChatResponse(reply=reply.strip(), model=f"ollama/{settings.OLLAMA_MODEL}")
 
     raise HTTPException(
         status_code=503,

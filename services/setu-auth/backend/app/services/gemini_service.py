@@ -1,4 +1,4 @@
-"""AI analysis for patient health reports — Gemini primary, OpenRouter model chain fallback."""
+"""AI analysis for patient health reports — OpenRouter chain primary, Gemini fallback, local Ollama final fallback."""
 import json
 import logging
 import re
@@ -157,6 +157,33 @@ async def _try_openrouter_chain(prompt: str) -> Optional[dict]:
     return None
 
 
+async def _try_ollama(prompt: str) -> Optional[dict]:
+    """Final fallback — local Ollama instance."""
+    try:
+        async with httpx.AsyncClient(timeout=120) as client:
+            resp = await client.post(
+                f"{settings.OLLAMA_BASE_URL}/api/generate",
+                json={
+                    "model": settings.OLLAMA_MODEL,
+                    "prompt": prompt,
+                    "stream": False,
+                    "format": "json",
+                },
+            )
+            if resp.status_code == 200:
+                content = resp.json().get("response", "")
+                if not content or not content.strip():
+                    return None
+                result = _normalise(_parse_json(content))
+                result["generated_by_model"] = f"ollama/{settings.OLLAMA_MODEL}"
+                logger.info("Ollama model %s succeeded for health analysis.", settings.OLLAMA_MODEL)
+                return result
+            logger.warning("Ollama returned %s: %s", resp.status_code, resp.text[:200])
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Ollama fallback failed: %s", exc)
+    return None
+
+
 async def analyze_patient_health(
     vitals_data: dict,
     checkin_data: dict,
@@ -168,7 +195,13 @@ async def analyze_patient_health(
     prompt = _build_prompt(vitals_data, checkin_data, goals_data, patient_context, language)
     start = time.time()
 
-    # 1. Try Gemini SDK models in order
+    # 1. OpenRouter model chain (primary)
+    result = await _try_openrouter_chain(prompt)
+    if result is not None:
+        result["generation_latency_ms"] = int((time.time() - start) * 1000)
+        return result
+
+    # 2. Gemini SDK models in order (fallback)
     if _GENAI_AVAILABLE and settings.GEMINI_API_KEY:
         for model_name in _GEMINI_MODELS:
             try:
@@ -183,13 +216,13 @@ async def analyze_patient_health(
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Gemini model %s failed: %s", model_name, exc)
 
-    # 2. OpenRouter model chain fallback
-    fallback = await _try_openrouter_chain(prompt)
-    if fallback is not None:
-        fallback["generation_latency_ms"] = int((time.time() - start) * 1000)
-        return fallback
+    # 3. Local Ollama (final fallback)
+    result = await _try_ollama(prompt)
+    if result is not None:
+        result["generation_latency_ms"] = int((time.time() - start) * 1000)
+        return result
 
-    # 3. Total failure
+    # 4. Total failure
     logger.error("All AI providers failed for patient health analysis.")
     return {
         "overall_risk_band": None,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -65,12 +66,14 @@ export default function SignInPage() {
     <main className="min-h-screen bg-[#08231F] flex items-center justify-center p-4">
       <div className="bg-white max-w-md w-full rounded-2xl shadow-2xl p-8">
         <div className="text-center mb-6">
-          <h1
-            className="text-3xl font-bold text-[#0E7C66] tracking-wide"
-            style={{ fontFamily: "Georgia, serif" }}
-          >
-            SHETU
-          </h1>
+          <Image
+            src="/images/logo.png"
+            alt="Shetu logo"
+            width={96}
+            height={96}
+            className="mx-auto h-24 w-24 object-contain"
+            priority
+          />
           <p className="text-sm text-gray-500 mt-1">
             The AI Care Bridge — সেতু
           </p>

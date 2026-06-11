@@ -1,4 +1,19 @@
-# Shetu — সেতু (The AI Care Bridge)
+<div align="center">
+  <img src="./app_logo.png" alt="Shetu logo" width="120" />
+
+  # Shetu — সেতু
+  ### The AI Care Bridge
+
+  [![Next.js](https://img.shields.io/badge/Frontend-Next.js%2014-000000?logo=next.js&logoColor=white)](https://nextjs.org/)
+  [![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+  [![Supabase](https://img.shields.io/badge/Database-Supabase-3FCF8E?logo=supabase&logoColor=white)](https://supabase.com/)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+  [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+</div>
+
+---
 
 **Shetu** is a maternal & general-health companion platform that pairs a FastAPI
 backend with a Next.js frontend. It started as a simple auth microservice and
@@ -8,13 +23,14 @@ has grown into a full health-tracking + AI-assistant suite for two user roles:
 - **🧑‍⚕️ Patient** — general vitals tracking, daily check-ins, health goals, AI risk prediction, telemedicine, health blog
 
 Both roles share a central AI chatbot ("Saathi"), authentication, profile
-management, and PDF report generation — all backed by Supabase.
+management, a digital health card, and PDF report generation — all backed by Supabase.
 
 ---
 
 ## Table of Contents
 
 - [Features](#features)
+- [Branding](#branding)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
 - [Prerequisites](#prerequisites)
@@ -32,6 +48,7 @@ management, and PDF report generation — all backed by Supabase.
 
 - **Authentication** — Supabase-backed signup/signin/email verification with role-based profiles (`admin`, `mother`, `patient`)
 - **Profile & Account** — profile creation/summary, avatar upload, account settings
+- **Digital Health Card** — a shareable Shetu Health Card showing name, issue date, 1-year validity, and earned health points
 - **Vitals tracking** — log & view vitals history, trends, and stats (separate flows for patient vs. mother/ANC)
 - **Daily check-ins** — patient mood/symptom check-ins with weekly summaries
 - **Health goals** — create, track, and mark goals as achieved
@@ -39,9 +56,30 @@ management, and PDF report generation — all backed by Supabase.
 - **AI Health Assistant (Saathi)** — conversational chatbot for health questions, with optional lab-value input
 - **Risk prediction** — AI-assisted health risk insights
 - **Doctor / consultancy search** — BMDC-sourced doctor directory, specialties, telemedicine, and emergency contacts (general + gynecologist-specific for mothers)
-- **Health blog** — auto-fetched & cached articles from WHO/CDC/NHS RSS feeds, with bookmarking, synced to Supabase on a schedule
-- **Nutrition & Rewards modules** — supporting tools on the dashboard
+- **Health blog** — auto-fetched & cached articles from WHO/CDC/NHS RSS feeds, with bookmarking, synced to Supabase on a schedule, and verified working source links
+- **Nutrition & Rewards modules** — daily plans, streaks, shields, and a nutrient passport on the dashboard
 - **Flag detection** — automatic vital-sign flagging rules for both patient and maternal contexts
+
+---
+
+## Branding
+
+Shetu's identity is the teal hand-and-heart mark paired with the **shetu / সেতু**
+wordmark, used across the favicon, sign-in/sign-up screens, and dashboard headers.
+
+<div align="center">
+  <img src="./app_logo.png" alt="Shetu logo" width="96" />
+</div>
+
+The **Shetu Health Card** (`src/components/shared/HealthCard.tsx`) is a reusable
+component shown in the Rewards and Nutrition modules for both roles. It displays
+the user's name, issue date, a 1-year validity (computed from the issue date),
+and their current health points, styled with the brand teal (`#0E7C66`) and
+amber (`#F2A33D`) accents.
+
+<div align="center">
+  <img src="./health_card.jpg" alt="Shetu Health Card concept" width="320" />
+</div>
 
 ---
 
@@ -62,51 +100,65 @@ management, and PDF report generation — all backed by Supabase.
 ## Project Structure
 
 ```
-setu-auth/
-├── backend/
-│   ├── app/
-│   │   ├── main.py                  # FastAPI app, CORS, routers, scheduler, error handlers
-│   │   ├── core/
-│   │   │   ├── config.py            # Pydantic settings from .env
-│   │   │   ├── auth.py              # JWT/token verification helpers
-│   │   │   ├── deps.py              # FastAPI dependencies (current user, etc.)
-│   │   │   └── supabase.py          # admin client + create_anon_client()
-│   │   ├── models/                  # Pydantic request/response models
-│   │   ├── routes/
-│   │   │   ├── auth.py              # /api/v1/auth — signup, signin, me
-│   │   │   ├── profile.py           # /api/v1/profile
-│   │   │   ├── account.py           # /api/v1/account
-│   │   │   ├── vitals.py            # /api/v1/vitals (patient)
-│   │   │   ├── checkin.py           # /api/v1/checkin (patient)
-│   │   │   ├── goals.py             # /api/v1/goals (patient)
-│   │   │   ├── reports.py           # /api/v1/reports (patient AI reports)
-│   │   │   ├── consultancy.py       # /api/v1/doctors (patient)
-│   │   │   ├── blog.py              # /api/v1/blog (patient)
-│   │   │   ├── chat.py              # /api/v1/chat (Saathi assistant)
-│   │   │   ├── mother_vitals.py     # /api/v1/mother/vitals (ANC)
-│   │   │   ├── mother_reports.py    # /api/v1/mother/reports (maternal AI reports)
-│   │   │   ├── mother_doctors.py    # /api/v1/mother/doctors (gynecologists)
-│   │   │   └── mother_blog.py       # /api/v1/mother/blog
-│   │   └── services/                # Gemini/OpenRouter, PDF, BMDC, blog fetcher, flag rules
-│   ├── generated_reports/           # Output PDFs (gitignored content)
-│   ├── requirements.txt
-│   ├── .env.example
-│   └── start.ps1                    # Windows venv bootstrap + run
-├── frontend/
-│   ├── src/
-│   │   ├── app/
-│   │   │   ├── auth/                # signin / signup / callback
-│   │   │   └── dashboard/
-│   │   │       ├── mother/          # mother dashboard + Saathi modules
-│   │   │       └── patient/         # patient dashboard + Saathi modules
-│   │   ├── components/
-│   │   │   └── shared/CentralChatbot/  # shared AI chatbot UI
-│   │   ├── hooks/                   # voice input/output, chatbot context
-│   │   └── lib/                     # Supabase clients, API wrapper, domain helpers
-│   ├── package.json
-│   └── .env.local.example
-├── Makefile                          # WSL/Linux task runner
-├── start-backend.ps1 / start-frontend.ps1 / start-dev.ps1   # Windows launchers
+SHETU/
+├── app_logo.png                      # Brand mark (used in this README)
+├── health_card.jpg                   # Health Card design reference
+├── database/                         # SQL schema / migration references
+├── services/
+│   └── setu-auth/
+│       ├── backend/
+│       │   ├── app/
+│       │   │   ├── main.py                  # FastAPI app, CORS, routers, scheduler, error handlers
+│       │   │   ├── core/
+│       │   │   │   ├── config.py            # Pydantic settings from .env
+│       │   │   │   ├── auth.py              # JWT/token verification helpers
+│       │   │   │   ├── deps.py              # FastAPI dependencies (current user, etc.)
+│       │   │   │   └── supabase.py          # admin client + create_anon_client()
+│       │   │   ├── models/                  # Pydantic request/response models
+│       │   │   ├── routes/
+│       │   │   │   ├── auth.py              # /api/v1/auth — signup, signin, me
+│       │   │   │   ├── profile.py           # /api/v1/profile
+│       │   │   │   ├── account.py           # /api/v1/account
+│       │   │   │   ├── vitals.py            # /api/v1/vitals (patient)
+│       │   │   │   ├── checkin.py           # /api/v1/checkin (patient)
+│       │   │   │   ├── goals.py             # /api/v1/goals (patient)
+│       │   │   │   ├── reports.py           # /api/v1/reports (patient AI reports)
+│       │   │   │   ├── consultancy.py       # /api/v1/doctors (patient)
+│       │   │   │   ├── blog.py              # /api/v1/blog (patient)
+│       │   │   │   ├── chat.py              # /api/v1/chat (Saathi assistant)
+│       │   │   │   ├── mother_vitals.py     # /api/v1/mother/vitals (ANC)
+│       │   │   │   ├── mother_reports.py    # /api/v1/mother/reports (maternal AI reports)
+│       │   │   │   ├── mother_doctors.py    # /api/v1/mother/doctors (gynecologists)
+│       │   │   │   └── mother_blog.py       # /api/v1/mother/blog
+│       │   │   └── services/                # Gemini/OpenRouter, PDF, BMDC, blog fetcher, flag rules
+│       │   ├── generated_reports/           # Output PDFs (gitignored content)
+│       │   ├── requirements.txt
+│       │   ├── .env.example
+│       │   └── start.ps1                    # Windows venv bootstrap + run
+│       ├── frontend/
+│       │   ├── public/
+│       │   │   ├── images/logo.png          # Brand logo used across the app
+│       │   │   ├── favicon.ico
+│       │   │   └── icon.png
+│       │   ├── src/
+│       │   │   ├── app/
+│       │   │   │   ├── auth/                # signin / signup / callback
+│       │   │   │   └── dashboard/
+│       │   │   │       ├── mother/          # mother dashboard + Saathi modules
+│       │   │   │       └── patient/         # patient dashboard + Saathi modules
+│       │   │   ├── components/
+│       │   │   │   ├── shared/
+│       │   │   │   │   ├── HealthCard.tsx       # Reusable digital Health Card
+│       │   │   │   │   ├── RewardsModule.tsx    # Streaks, shields, nutrient passport
+│       │   │   │   │   ├── NutritionModule.tsx  # Nutrition plans + Health Card
+│       │   │   │   │   └── CentralChatbot/      # shared AI chatbot UI
+│       │   │   │   └── mother/                  # mother-specific components (BottomNav, etc.)
+│       │   │   ├── hooks/                   # voice input/output, chatbot context
+│       │   │   └── lib/                     # Supabase clients, API wrapper, domain helpers
+│       │   ├── package.json
+│       │   └── .env.local.example
+│       ├── Makefile                          # WSL/Linux task runner
+│       └── start-backend.ps1 / start-frontend.ps1 / start-dev.ps1   # Windows launchers
 └── README.md
 ```
 
@@ -168,7 +220,7 @@ email after signup.
 
 > The Saathi modules (vitals, check-ins, goals, reports, blog, doctors) read
 > and write additional tables (`vitals`, `checkins`, `goals`, `reports`,
-> `articles`, `bookmarks`, `doctor_chambers`, mother-equivalents, etc.) via the
+> `health_articles`, `article_bookmarks`, `doctor_chambers`, mother-equivalents, etc.) via the
 > `service_role` key — these are created/managed as the app evolves.
 
 ---
@@ -179,11 +231,11 @@ email after signup.
 
 ```bash
 # 1. Copy env files and fill in your keys
-cp backend/.env.example backend/.env
-cp frontend/.env.local.example frontend/.env.local
+cp services/setu-auth/backend/.env.example services/setu-auth/backend/.env
+cp services/setu-auth/frontend/.env.local.example services/setu-auth/frontend/.env.local
 
 # 2. Install dependencies (backend venv + frontend node_modules)
-make install
+cd services/setu-auth && make install
 
 # 3. Run both services
 make dev
@@ -193,10 +245,11 @@ make dev
 
 ```powershell
 # 1. Copy env files and fill in your keys
-Copy-Item backend\.env.example backend\.env
-Copy-Item frontend\.env.local.example frontend\.env.local
+Copy-Item services\setu-auth\backend\.env.example services\setu-auth\backend\.env
+Copy-Item services\setu-auth\frontend\.env.local.example services\setu-auth\frontend\.env.local
 
 # 2. Install deps (creates backend\.venv-win on first run)
+cd services\setu-auth
 make win-install
 
 # 3. Run both services in separate windows
@@ -242,7 +295,9 @@ make win-install
 | `NEXT_PUBLIC_SUPABASE_URL` | ✅ | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Public anon key |
 | `NEXT_PUBLIC_API_URL` | ✅ | Backend base URL (default `http://localhost:8000`) |
-| `NEXT_PUBLIC_OPENROUTER_API_KEY` | – | Used by client-side AI helpers |
+| `NEXT_PUBLIC_SITE_URL` | – | Frontend origin used for signup confirmation-email redirects |
+| `NEXT_PUBLIC_GEMINI_API_KEY` | – | Used by client-side AI helpers |
+| `NEXT_PUBLIC_OPENROUTER_API_KEY` | – | Fallback for client-side AI helpers |
 
 ---
 
@@ -306,9 +361,9 @@ All `4xx`/`5xx` responses use the shape `{ "detail": "…" }`. Endpoints marked
 | `GET` | `/api/v1/doctors/specialties` | ✅ | List specialties |
 | `GET` | `/api/v1/doctors/telemedicine` | ✅ | Telemedicine providers |
 | `GET` | `/api/v1/doctors/emergency` | ✅ | Emergency contacts |
-| `GET` | `/api/v1/blog/articles` | ✅ | List blog articles |
+| `GET` | `/api/v1/blog/articles` | ✅ | List blog articles (live WHO/CDC/NHS feed + cache) |
 | `GET` | `/api/v1/blog/featured` | ✅ | Featured articles |
-| `GET` | `/api/v1/blog/articles/{slug}` | ✅ | Article detail |
+| `GET` | `/api/v1/blog/articles/{slug}` | ✅ | Article detail (includes `source_url`) |
 | `GET` | `/api/v1/blog/bookmarks` | ✅ | List bookmarked articles |
 | `POST` | `/api/v1/blog/articles/{article_id}/bookmark` | ✅ | Bookmark an article |
 | `DELETE` | `/api/v1/blog/articles/{article_id}/bookmark` | ✅ | Remove bookmark |
@@ -329,8 +384,8 @@ All `4xx`/`5xx` responses use the shape `{ "detail": "…" }`. Endpoints marked
 | `GET` | `/api/v1/mother/doctors/search` | ✅ | Search gynecologists |
 | `GET` | `/api/v1/mother/doctors/telemedicine` | ✅ | Telemedicine providers |
 | `GET` | `/api/v1/mother/doctors/emergency` | ✅ | Maternal emergency contacts |
-| `GET` | `/api/v1/mother/blog/articles` | ✅ | List blog articles |
-| `GET` | `/api/v1/mother/blog/articles/{slug}` | ✅ | Article detail |
+| `GET` | `/api/v1/mother/blog/articles` | ✅ | List blog articles (filtered for maternal topics) |
+| `GET` | `/api/v1/mother/blog/articles/{slug}` | ✅ | Article detail (includes `source_url`) |
 | `GET` | `/api/v1/mother/blog/featured` | ✅ | Featured articles |
 | `GET` | `/api/v1/mother/blog/bookmarks` | ✅ | List bookmarked articles |
 | `POST` | `/api/v1/mother/blog/articles/{article_id}/bookmark` | ✅ | Bookmark an article |

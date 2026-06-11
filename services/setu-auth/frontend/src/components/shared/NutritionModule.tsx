@@ -9,6 +9,9 @@ import { BD_FOODS } from '@/lib/foods'
 import { sendNutritionPlan, sendNutritionReview, sendSubstituteRequest } from '@/lib/gemini'
 import { saveMealPlanAndChecklist, setChecklistEaten, setChecklistSubstitute, addRewardPoints, getTotalPoints, logMeals } from '@/lib/pushti-db'
 import type { ChecklistItem } from '@/lib/pushti-db'
+import { getRewardSnapshot } from '@/lib/reward-db'
+import HealthCard from '@/components/shared/HealthCard'
+import type { UserProfile } from '@/lib/api'
 
 const DIVISIONS = ['Dhaka', 'Chattogram', 'Rajshahi', 'Khulna', 'Sylhet', 'Barishal', 'Rangpur', 'Mymensingh']
 const CONDITIONS = ['Diabetes', 'Hypertension', 'Anaemia', 'Gestational Diabetes', 'Thyroid', 'Heart Disease', 'Kidney Disease', 'None']
@@ -48,7 +51,7 @@ function getInstantAvoid(conditions: string[]) {
   }))
 }
 
-function HealthCard({ profile, points, streak }: { profile: Partial<NutritionProfile>; points: number; streak: number }) {
+function NutritionStatusCard({ profile, points, streak }: { profile: Partial<NutritionProfile>; points: number; streak: number }) {
   const level = points < 50 ? 'Bronze' : points < 150 ? 'Silver' : points < 400 ? 'Gold' : 'Platinum'
   const levelColor = { Bronze: '#cd7f32', Silver: '#a8a9ad', Gold: '#ffd700', Platinum: '#e5e4e2' }[level] ?? '#0E7C66'
   const bmi = profile.weight_kg && profile.height_cm
@@ -146,6 +149,8 @@ export default function NutritionModule({ dashboardType }: { dashboardType: 'mot
   const [streak, setStreak] = useState<StreakData>({ streak: 0, points: 0, lastDate: '' })
   const [dbPoints, setDbPoints] = useState(0)
   const [showComingSoon, setShowComingSoon] = useState(false)
+  const [user, setUser] = useState<UserProfile | null>(null)
+  const [healthPoints, setHealthPoints] = useState(0)
 
   const [review, setReview] = useState<string | null>(null)
   const [reviewLoading, setReviewLoading] = useState(false)
@@ -163,6 +168,11 @@ export default function NutritionModule({ dashboardType }: { dashboardType: 'mot
     const savedStreak = localStorage.getItem('shetu_streak')
     if (savedStreak) { try { setStreak(JSON.parse(savedStreak)) } catch { /* ignore */ } }
     getTotalPoints().then(setDbPoints)
+    getRewardSnapshot().then((s) => setHealthPoints(s.totalPoints)).catch(() => {})
+    const rawUser = localStorage.getItem('shetu_user')
+    if (rawUser) {
+      try { setUser(JSON.parse(rawUser) as UserProfile) } catch { /* ignore */ }
+    }
     // Load 30-day meal log from localStorage (with real food names)
     const log: { date: string; meals: { type: string; food: string }[] }[] = []
     for (let i = 0; i < 30; i++) {
@@ -374,6 +384,15 @@ export default function NutritionModule({ dashboardType }: { dashboardType: 'mot
         </div>
 
         <main className="max-w-md mx-auto px-4 py-6 space-y-4">
+          <div className="space-y-2">
+            <h2 className="text-sm font-semibold text-gray-600">Your Health Card</h2>
+            <HealthCard
+              name={user?.full_name ?? 'Shetu User'}
+              issueDate={user?.created_at ?? new Date().toISOString()}
+              healthPoints={healthPoints}
+            />
+          </div>
+
           <div className="bg-white rounded-2xl shadow-sm p-5 space-y-4">
             <h2 className="font-semibold text-gray-700">Your Profile</h2>
 
@@ -731,7 +750,7 @@ export default function NutritionModule({ dashboardType }: { dashboardType: 'mot
         {/* ── REWARDS TAB ── */}
         {tab === 'rewards' && (
           <>
-            <HealthCard profile={profile} points={streak.points + dbPoints} streak={streak.streak} />
+            <NutritionStatusCard profile={profile} points={streak.points + dbPoints} streak={streak.streak} />
 
             <div className="bg-white rounded-2xl shadow-sm p-5 space-y-2">
               <div className="flex justify-between text-sm text-gray-500">

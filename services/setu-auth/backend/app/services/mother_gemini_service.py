@@ -138,8 +138,35 @@ async def _try_openrouter(prompt: str) -> Optional[dict]:
     return None
 
 
+async def _try_ollama(prompt: str) -> Optional[dict]:
+    """Local Ollama fallback."""
+    try:
+        async with httpx.AsyncClient(timeout=120) as client:
+            resp = await client.post(
+                f"{settings.OLLAMA_BASE_URL}/api/generate",
+                json={
+                    "model": settings.OLLAMA_MODEL,
+                    "prompt": prompt,
+                    "stream": False,
+                    "format": "json",
+                },
+            )
+            if resp.status_code == 200:
+                content = resp.json().get("response", "")
+                if not content or not content.strip():
+                    return None
+                result = _normalise(_parse_json(content))
+                result["generated_by_model"] = f"ollama/{settings.OLLAMA_MODEL}"
+                logger.info("Ollama model %s succeeded for maternal analysis.", settings.OLLAMA_MODEL)
+                return result
+            logger.warning("Ollama returned %s: %s", resp.status_code, resp.text[:200])
+    except Exception as exc:
+        logger.warning("Ollama fallback failed: %s", exc)
+    return None
+
+
 async def analyze_pregnancy_health(vitals_agg: dict, pregnancy_context: dict, language: str = 'en') -> dict:
-    """OpenRouter first → Gemini SDK fallback → hardcoded fallback. Never raises."""
+    """OpenRouter first → Gemini SDK fallback → local Ollama → hardcoded fallback. Never raises."""
     prompt = _build_prompt(vitals_agg, pregnancy_context, language)
     start = time.time()
 
@@ -163,7 +190,13 @@ async def analyze_pregnancy_health(vitals_agg: dict, pregnancy_context: dict, la
             except Exception as exc:
                 logger.warning("Gemini model %s failed: %s", model_name, exc)
 
-    # 3. Hardcoded safe fallback — never ai_unavailable for UI
+    # 3. Local Ollama fallback
+    result = await _try_ollama(prompt)
+    if result is not None:
+        result["generation_latency_ms"] = int((time.time() - start) * 1000)
+        return result
+
+    # 4. Hardcoded safe fallback — never ai_unavailable for UI
     logger.error("All AI providers failed for maternal analysis.")
     return {
         "overall_risk_band": "watch",

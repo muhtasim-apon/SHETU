@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, Flame, Shield, Wallet, Award, Clock } from 'lucide-react'
+import { ChevronLeft, Flame, Shield, Award, Clock } from 'lucide-react'
 import {
   getRewardSnapshot,
   getWeeklyNutrientPassport,
   type RewardSnapshot,
   type NutrientKey,
 } from '@/lib/reward-db'
+import HealthCard from '@/components/shared/HealthCard'
+import type { UserProfile } from '@/lib/api'
 
 const NUTRIENT_LABELS: Record<NutrientKey, string> = {
   iron: 'Iron',
@@ -43,11 +45,16 @@ export default function RewardsModule({ dashboardType }: { dashboardType: 'mothe
   const [snap, setSnap] = useState<RewardSnapshot | null>(null)
   const [passport, setPassport] = useState<Record<NutrientKey, boolean> | null>(null)
   const [countdown, setCountdown] = useState(msUntilMidnight())
+  const [user, setUser] = useState<UserProfile | null>(null)
 
   useEffect(() => {
     if (!localStorage.getItem('shetu_token')) { router.replace('/auth/signin'); return }
     getRewardSnapshot().then(setSnap).catch(() => setSnap(null))
     setPassport(getWeeklyNutrientPassport())
+    const raw = localStorage.getItem('shetu_user')
+    if (raw) {
+      try { setUser(JSON.parse(raw) as UserProfile) } catch { /* ignore */ }
+    }
   }, [router])
 
   useEffect(() => {
@@ -129,44 +136,43 @@ export default function RewardsModule({ dashboardType }: { dashboardType: 'mothe
         </div>
 
         {/* Health Card — reward points */}
-        <div className="relative rounded-2xl overflow-hidden shadow-md" style={{ background: 'linear-gradient(135deg, #0A2E2A 0%, #0E7C66 60%, #13A37F 100%)' }}>
-          <div className="absolute -top-6 -right-6 w-28 h-28 rounded-full opacity-10 bg-white" />
-          <div className="absolute -bottom-4 -left-4 w-20 h-20 rounded-full opacity-10 bg-white" />
-          <div className="relative p-5 space-y-4">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-[10px] text-white/60 tracking-widest font-semibold">SHETU HEALTH CARD</p>
-                <p className="text-[18px] font-bold text-white mt-0.5">{rewardLevel} Member</p>
-              </div>
-              <div className="w-11 h-11 rounded-2xl bg-white/15 flex items-center justify-center">
-                <Wallet size={22} className="text-white" />
-              </div>
-            </div>
+        <HealthCard
+          name={user?.full_name ?? 'Shetu User'}
+          issueDate={user?.created_at ?? new Date().toISOString()}
+          healthPoints={totalPoints}
+        />
 
-            <div className="grid grid-cols-3 gap-3 bg-white/10 rounded-xl p-3">
-              <div className="text-center">
-                <p className="text-[10px] text-white/60">Points</p>
-                <p className="text-[18px] font-bold text-white">{totalPoints}</p>
-              </div>
-              <div className="text-center border-x border-white/20">
-                <p className="text-[10px] text-white/60">Streak</p>
-                <p className="text-[18px] font-bold text-white">{streak}d</p>
-              </div>
-              <div className="text-center">
-                <p className="text-[10px] text-white/60">Shield</p>
-                <p className="text-[18px] font-bold text-white">{snap?.shield.shield ?? 0}</p>
-              </div>
+        {/* Reward level progress */}
+        <div className="rounded-2xl overflow-hidden shadow-md p-5 space-y-3" style={{ background: 'linear-gradient(135deg, #0A2E2A 0%, #0E7C66 60%, #13A37F 100%)' }}>
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-[10px] text-white/60 tracking-widest font-semibold">REWARD LEVEL</p>
+              <p className="text-[18px] font-bold text-white mt-0.5">{rewardLevel} Member</p>
             </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3 bg-white/10 rounded-xl p-3">
+            <div className="text-center">
+              <p className="text-[10px] text-white/60">Points</p>
+              <p className="text-[18px] font-bold text-white">{totalPoints}</p>
+            </div>
+            <div className="text-center border-x border-white/20">
+              <p className="text-[10px] text-white/60">Streak</p>
+              <p className="text-[18px] font-bold text-white">{streak}d</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] text-white/60">Shield</p>
+              <p className="text-[18px] font-bold text-white">{snap?.shield.shield ?? 0}</p>
+            </div>
+          </div>
 
-            {/* Progress to next level */}
-            <div className="space-y-1">
-              <div className="flex justify-between text-[10px] text-white/50">
-                <span>{rewardLevel}</span>
-                <span>{nextLevelAt ? `${totalPoints}/${nextLevelAt}` : 'Max level'}</span>
-              </div>
-              <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
-                <div className="h-full rounded-full bg-white/80" style={{ width: `${levelProgress}%` }} />
-              </div>
+          {/* Progress to next level */}
+          <div className="space-y-1">
+            <div className="flex justify-between text-[10px] text-white/50">
+              <span>{rewardLevel}</span>
+              <span>{nextLevelAt ? `${totalPoints}/${nextLevelAt}` : 'Max level'}</span>
+            </div>
+            <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
+              <div className="h-full rounded-full bg-white/80" style={{ width: `${levelProgress}%` }} />
             </div>
           </div>
         </div>

@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ChevronLeft, Bookmark, ExternalLink } from "lucide-react";
 import { saathiGet, saathiPost, saathiDelete } from "@/lib/saathi";
+import { STATIC_ARTICLES } from "@/lib/static-articles";
 
 interface Article {
-  id?: string; title: string; slug: string; category: string; content: string;
+  id?: string; title: string; slug: string; category: string; content?: string;
   summary?: string; author_name?: string; author_role?: string; read_time_mins?: number;
   published_at?: string; source_url?: string; is_bookmarked?: boolean;
 }
@@ -20,7 +21,11 @@ export default function ArticleReaderPage() {
 
   useEffect(() => {
     if (!localStorage.getItem("shetu_token")) { router.replace("/auth/signin"); return; }
-    saathiGet<Article>(`/api/v1/blog/articles/${slug}`).then(setA).catch((e) => setError((e as Error).message));
+    saathiGet<Article>(`/api/v1/blog/articles/${slug}`).then(setA).catch(() => {
+      const fallback = STATIC_ARTICLES.find((s) => s.slug === slug);
+      if (fallback) setA(fallback as Article);
+      else setError("Article not found.");
+    });
   }, [router, slug]);
 
   async function toggle() {

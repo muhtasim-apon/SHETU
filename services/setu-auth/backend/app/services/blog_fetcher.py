@@ -82,15 +82,25 @@ async def fetch_and_cache_articles():
         try:
             # Run blocking feedparser.parse in a thread so the event loop stays free
             feed = await loop.run_in_executor(None, feedparser.parse, cfg["url"])
+            if getattr(feed, "bozo", False) and not feed.entries:
+                logger.warning("%s RSS feed returned no entries (bozo=%s): %s",
+                               source_name, feed.bozo, getattr(feed, "bozo_exception", ""))
+            matched = 0
             for entry in feed.entries:
                 title = entry.get("title", "")
                 summary = _clean_summary(entry.get("summary", ""))
                 text = (title + " " + summary).lower()
                 if any(kw in text for kw in cfg["keywords"]):
+                    matched += 1
+                    link = entry.get("link", "")
+                    entry_id = entry.get("id", "")
+                    # CDC's podcast feed links point to audio downloads; prefer the
+                    # article page URL given in <id> when available.
+                    source_url = entry_id if "download.asp" in link and entry_id.startswith("http") else link
                     all_articles.append({
                         "title": title,
                         "summary": summary[:500],
-                        "source_url": entry.get("link", ""),
+                        "source_url": source_url,
                         "published_at": entry.get("published", ""),
                         "author_name": source_name,
                         "author_role": "Public Health Authority",
@@ -99,6 +109,8 @@ async def fetch_and_cache_articles():
                         "read_time_mins": max(1, len(summary.split()) // 200),
                         "tags": extract_tags(title, summary),
                     })
+            logger.info("%s RSS: %d entries fetched, %d matched keywords.",
+                        source_name, len(feed.entries), matched)
         except Exception as e:  # noqa: BLE001
             logger.warning("Failed to fetch %s RSS: %s", source_name, e)
 

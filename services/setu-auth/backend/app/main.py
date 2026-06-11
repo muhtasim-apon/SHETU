@@ -126,6 +126,8 @@ async def _saathi_startup():
 async def _bg_blog_fetch():
     try:
         await blog_fetcher.fetch_and_cache_articles()
+        logger.info("Startup blog fetch complete: %d articles cached.",
+                     len(blog_fetcher.get_cached_articles()))
     except Exception as exc:
         logger.warning("Background article fetch failed: %s", exc)
 

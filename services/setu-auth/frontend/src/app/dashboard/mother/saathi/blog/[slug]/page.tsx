@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { ArrowLeft, Heart, Clock, User } from 'lucide-react'
 import BottomNav from '@/components/mother/BottomNav'
+import { STATIC_PREGNANCY_ARTICLES } from '@/lib/static-pregnancy-articles'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -60,8 +61,17 @@ export default function ArticlePage() {
           const relData = await relRes.json()
           setRelated((relData.articles || []).filter((a: any) => a.slug !== slug).slice(0, 2))
         } catch {}
-      } catch (err: any) {
-        setError(err.message)
+      } catch {
+        const fallback = STATIC_PREGNANCY_ARTICLES.find((s) => s.slug === slug)
+        if (fallback) {
+          setArticle({ ...fallback, content: fallback.content || fallback.summary })
+          setBookmarked(false)
+          setRelated(
+            STATIC_PREGNANCY_ARTICLES.filter((s) => s.category === fallback.category && s.slug !== slug).slice(0, 2)
+          )
+        } else {
+          setError('Article not found')
+        }
       } finally {
         setLoading(false)
       }

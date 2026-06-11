@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { MessageCircle, Phone, AlertTriangle } from 'lucide-react'
 import {
@@ -47,6 +48,7 @@ export default function PregnancyDashboard() {
     <div className="min-h-screen bg-[#F4FAF8] max-w-md mx-auto">
       {/* Header */}
       <div className="bg-gradient-to-b from-[#0A2E2A] to-[#0E7C66] pt-12 pb-6 px-5">
+        <Image src="/images/logo.png" alt="Shetu logo" width={32} height={32} className="h-8 w-8 object-contain mb-2" />
         <p className="text-[13px] text-[#F2A93B] font-semibold tracking-widest">SHETU MAA</p>
         <h1 className="text-[28px] font-bold text-white mt-1">আপনার গর্ভাবস্থা</h1>
         <p className="text-[14px] text-white/70 mt-0.5">

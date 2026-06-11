@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   BookOpen, ClipboardCheck, FileText, HeartPulse,
@@ -30,7 +31,8 @@ export default function SaathiHubPage() {
           <button onClick={() => router.push("/dashboard/patient")} className="flex items-center gap-1 text-white/70 text-sm">
             <ChevronLeft size={16} /> Dashboard
           </button>
-          <h1 className="text-2xl font-bold mt-3">Shetu Saathi</h1>
+          <Image src="/images/logo.png" alt="Shetu logo" width={32} height={32} className="h-8 w-8 object-contain mt-3" />
+          <h1 className="text-2xl font-bold mt-1">Shetu Saathi</h1>
           <p className="text-sm text-white/60 mt-1">Your personal health companion</p>
         </div>
       </header>
